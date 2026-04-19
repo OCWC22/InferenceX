@@ -3,18 +3,25 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PORTABLE_SCRIPT="$SCRIPT_DIR/gmi_portable_benchmark.sh"
+# shellcheck source=_gmi_common.sh
+source "$SCRIPT_DIR/_gmi_common.sh"
 
 usage() {
-  echo "Usage: gmi_full_suite.sh --gpu-type <h100|h200|b200> [--db-path <path>]"
+  echo "Usage: gmi_full_suite.sh --gpu-type <h100|h200|b200|b300|gb200|gb300> [--cloud <gmi|aws>] [--db-path <path>]"
 }
 
 GPU_TYPE=""
+CLOUD="gmi"
 DB_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --gpu-type)
       GPU_TYPE="$2"
+      shift 2
+      ;;
+    --cloud)
+      CLOUD="$2"
       shift 2
       ;;
     --db-path)
@@ -37,13 +44,8 @@ done
   exit 1
 }
 
-case "$GPU_TYPE" in
-  h100|h200|b200) ;;
-  *)
-    echo "Unsupported --gpu-type: $GPU_TYPE" >&2
-    exit 1
-    ;;
-esac
+validate_gpu_type "$GPU_TYPE" || exit 1
+validate_cloud "$CLOUD" || exit 1
 
 [[ -x "$PORTABLE_SCRIPT" ]] || {
   echo "Expected executable helper at $PORTABLE_SCRIPT" >&2
@@ -70,6 +72,7 @@ run_combo() {
 
   if "$PORTABLE_SCRIPT" \
     --gpu-type "$GPU_TYPE" \
+    --cloud "$CLOUD" \
     --model "$model" \
     --engine "$engine" \
     --context-band "$band" \
@@ -108,16 +111,25 @@ for model in qwen3.5 gptoss; do
   done
 done
 
-# 1m — qwen3.5 only (only model supporting 1M context), b200 only
-if [[ "$GPU_TYPE" == "b200" ]]; then
-  for engine in vllm sglang; do
-    for workload in chat code; do
-      run_combo qwen3.5 "$engine" 1m "$workload"
+# 1m — qwen3.5 only (only model supporting 1M context). All Blackwell
+# SKUs have ≥180GB HBM3e, enough to attempt the 1M preview:
+#   B200:  180GB  HGX (x86)
+#   B300:  288GB  HGX Ultra (x86)
+#   GB200: 192GB  NVL72 (aarch64)
+#   GB300: 288GB  NVL72 Ultra (aarch64)
+# H100/H200 are skipped. SKIPPED=4 == qwen3.5 × {vllm,sglang} × {chat,code}.
+case "$GPU_TYPE" in
+  b200|b300|gb200|gb300)
+    for engine in vllm sglang; do
+      for workload in chat code; do
+        run_combo qwen3.5 "$engine" 1m "$workload"
+      done
     done
-  done
-else
-  SKIPPED=4
-fi
+    ;;
+  *)
+    SKIPPED=4
+    ;;
+esac
 
 echo
 echo "========================================="

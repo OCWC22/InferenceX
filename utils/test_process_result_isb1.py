@@ -207,6 +207,66 @@ def test_isb1_replay_processing(tmp_path, sample_replay_result, base_env):
     assert_traceability_fields(persisted_output, "isb1_result")
 
 
+def test_tp_override_audit_fields_track_positive_env_values(tmp_path, sample_replay_result, base_env):
+    export_file = write_export_fixture(
+        tmp_path,
+        "datasets/isb1/exports/core/chat_8k1k.json",
+        {
+            "adapter_id": "inferencex_multiturn",
+            "surface": "chat",
+            "exports": [
+                {
+                    "trace_id": "trace-1",
+                    "runtime_stack_id": "vllm-0.8.5-h200",
+                    "hardware_profile_id": "h200-8gpu",
+                    "canonical_model_id": "deepseek-r1-0528",
+                    "support_status": "supported",
+                }
+            ],
+        },
+    )
+    env = base_env.copy()
+    env["EXPORT_FILE"] = export_file
+    env["ALLOW_NON_STANDARD_TP"] = "true"
+    env["TP_OVERRIDE_APPLIED"] = "true"
+
+    result = run_script(tmp_path, env, sample_replay_result, result_filename="isb1_tp_override_true")
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+    output_data = json.loads(result.stdout)
+    assert output_data["allow_non_standard_tp"] is True
+    assert output_data["tp_override_applied"] is True
+
+
+def test_tp_override_audit_fields_default_false_without_env(tmp_path, sample_replay_result, base_env):
+    export_file = write_export_fixture(
+        tmp_path,
+        "datasets/isb1/exports/core/chat_8k1k.json",
+        {
+            "adapter_id": "inferencex_multiturn",
+            "surface": "chat",
+            "exports": [
+                {
+                    "trace_id": "trace-1",
+                    "runtime_stack_id": "vllm-0.8.5-h200",
+                    "hardware_profile_id": "h200-8gpu",
+                    "canonical_model_id": "deepseek-r1-0528",
+                    "support_status": "supported",
+                }
+            ],
+        },
+    )
+    env = base_env.copy()
+    env["EXPORT_FILE"] = export_file
+
+    result = run_script(tmp_path, env, sample_replay_result, result_filename="isb1_tp_override_false")
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+    output_data = json.loads(result.stdout)
+    assert output_data["allow_non_standard_tp"] is False
+    assert output_data["tp_override_applied"] is False
+
+
 def test_offload_mode_env_propagation(tmp_path, sample_replay_result, base_env):
     export_file = write_export_fixture(
         tmp_path,
@@ -1004,3 +1064,102 @@ def test_producer_expectation_offload_mismatch(tmp_path, base_env, sample_replay
     assert output_data["producer_expectation_validation"]["offload_mode_match"] is False
     assert output_data["producer_expected_offload_mode"] == "hard_offload"
     assert output_data["kv_offload_observed"] is False
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Lane B: cloud label echoing (gb200-aws, h100-gmi, etc.)
+# ──────────────────────────────────────────────────────────────────────
+
+def test_cloud_env_is_echoed_into_processed_result(tmp_path, sample_replay_result, base_env):
+    """Lane B: CLOUD env is copied verbatim into the processed JSON."""
+    export_file = write_export_fixture(
+        tmp_path,
+        "datasets/isb1/exports/core/chat_8k1k.json",
+        {
+            "adapter_id": "inferencex_multiturn",
+            "surface": "chat",
+            "exports": [
+                {
+                    "trace_id": "trace-1",
+                    "runtime_stack_id": "vllm-0.8.5-h200",
+                    "hardware_profile_id": "h200-8gpu",
+                    "canonical_model_id": "deepseek-r1-0528",
+                    "support_status": "supported",
+                    "benchmark_certification_status": "dataset_replay_verified",
+                }
+            ],
+        },
+    )
+    env = base_env.copy()
+    env["EXPORT_FILE"] = export_file
+    env["CLOUD"] = "aws"
+    env["RUNNER_TYPE"] = "gb200-aws-baremetal"
+
+    result = run_script(tmp_path, env, sample_replay_result)
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+    output_data = json.loads(result.stdout)
+    assert output_data["cloud"] == "aws"
+    assert output_data["hw"] == "gb200-aws-baremetal"
+
+
+def test_cloud_field_defaults_to_none_when_env_missing(tmp_path, sample_replay_result, base_env):
+    """Lane A (Slurm) and any dispatch that omits CLOUD should see cloud=None."""
+    export_file = write_export_fixture(
+        tmp_path,
+        "datasets/isb1/exports/core/chat_8k1k.json",
+        {
+            "adapter_id": "inferencex_multiturn",
+            "surface": "chat",
+            "exports": [
+                {
+                    "trace_id": "trace-1",
+                    "runtime_stack_id": "vllm-0.8.5-h200",
+                    "hardware_profile_id": "h200-8gpu",
+                    "canonical_model_id": "deepseek-r1-0528",
+                    "support_status": "supported",
+                    "benchmark_certification_status": "dataset_replay_verified",
+                }
+            ],
+        },
+    )
+    env = base_env.copy()
+    env["EXPORT_FILE"] = export_file
+    env.pop("CLOUD", None)
+
+    result = run_script(tmp_path, env, sample_replay_result)
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+    output_data = json.loads(result.stdout)
+    assert output_data["cloud"] is None
+
+
+def test_cloud_field_empty_string_coerces_to_none(tmp_path, sample_replay_result, base_env):
+    """An empty CLOUD env (e.g. unset but exported) must coerce to None, never ''."""
+    export_file = write_export_fixture(
+        tmp_path,
+        "datasets/isb1/exports/core/chat_8k1k.json",
+        {
+            "adapter_id": "inferencex_multiturn",
+            "surface": "chat",
+            "exports": [
+                {
+                    "trace_id": "trace-1",
+                    "runtime_stack_id": "vllm-0.8.5-h200",
+                    "hardware_profile_id": "h200-8gpu",
+                    "canonical_model_id": "deepseek-r1-0528",
+                    "support_status": "supported",
+                    "benchmark_certification_status": "dataset_replay_verified",
+                }
+            ],
+        },
+    )
+    env = base_env.copy()
+    env["EXPORT_FILE"] = export_file
+    env["CLOUD"] = ""
+
+    result = run_script(tmp_path, env, sample_replay_result)
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+    output_data = json.loads(result.stdout)
+    assert output_data["cloud"] is None

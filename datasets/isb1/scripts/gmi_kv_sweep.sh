@@ -3,12 +3,15 @@ set -Eeuo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PORTABLE_SCRIPT="$SCRIPT_DIR/gmi_portable_benchmark.sh"
+# shellcheck source=_gmi_common.sh
+source "$SCRIPT_DIR/_gmi_common.sh"
 
 usage() {
   cat <<'EOF'
 Usage:
   gmi_kv_sweep.sh \
-    --gpu-type <h100|h200|b200> \
+    --gpu-type <h100|h200|b200|b300|gb200|gb300> \
+    [--cloud <gmi|aws>] \
     --model <qwen3.5|gptoss|dsr1> \
     --engine <vllm|sglang> \
     --context-band <8k|32k|64k|131k|500k|1m> \
@@ -37,6 +40,7 @@ trim() {
 }
 
 GPU_TYPE=""
+CLOUD="gmi"
 MODEL=""
 ENGINE=""
 CONTEXT_BAND=""
@@ -53,6 +57,7 @@ DB_PATH=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --gpu-type) GPU_TYPE="$2"; shift 2 ;;
+    --cloud) CLOUD="$2"; shift 2 ;;
     --model) MODEL="$2"; shift 2 ;;
     --engine) ENGINE="$2"; shift 2 ;;
     --context-band) CONTEXT_BAND="$2"; shift 2 ;;
@@ -76,6 +81,8 @@ done
 [[ -n "$CONTEXT_BAND" ]] || die "--context-band is required"
 [[ -n "$WORKLOAD" ]] || die "--workload is required"
 [[ -x "$PORTABLE_SCRIPT" ]] || die "Expected executable script: $PORTABLE_SCRIPT"
+validate_gpu_type "$GPU_TYPE" || die "Unsupported --gpu-type: $GPU_TYPE"
+validate_cloud "$CLOUD" || die "Unsupported --cloud: $CLOUD"
 
 case "$ENGINE" in
   vllm|sglang) ;;
@@ -123,6 +130,7 @@ for raw_mode in "${mode_list[@]}"; do
     cmd=(
       "$PORTABLE_SCRIPT"
       --gpu-type "$GPU_TYPE"
+      --cloud "$CLOUD"
       --model "$MODEL"
       --engine "$ENGINE"
       --context-band "$CONTEXT_BAND"

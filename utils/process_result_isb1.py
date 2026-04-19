@@ -377,7 +377,17 @@ data = {
     "offload_mode": os.environ.get("OFFLOAD_MODE") or None,
     "kv_cache_dtype": os.environ.get("KV_CACHE_DTYPE") or None,
     "disable_prefix_caching": os.environ.get("DISABLE_PREFIX_CACHING", "false").lower() == "true",
+    # Lane B cloud label (gmi|aws). Optional — Lane A dispatches do not set
+    # CLOUD, so the field is None for existing workflow rows and ingesters
+    # treat it as backward-compatible.
+    "cloud": os.environ.get("CLOUD") or None,
     "runtime_overrides": build_runtime_overrides(replay_result),
+    # F4 audit trail — echoed out of the benchmark template's TP derivation gate.
+    # `allow_non_standard_tp` records whether the dispatch opted into the escape
+    # hatch (non-standard runner or TP!=8); `tp_override_applied` records whether
+    # the matrix tp-override actually changed TP from its runner-default value.
+    "allow_non_standard_tp": os.environ.get("ALLOW_NON_STANDARD_TP", "false").lower() == "true",
+    "tp_override_applied": os.environ.get("TP_OVERRIDE_APPLIED", "false").lower() == "true",
 }
 
 # Mechanism_eval schema (additive, env-driven, backward-compatible null defaults).

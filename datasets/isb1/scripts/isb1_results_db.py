@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
   run_id TEXT,
   timestamp TEXT,
   gpu_type TEXT,
+  cloud TEXT,
   model TEXT,
   engine TEXT,
   context_band TEXT,
@@ -87,6 +88,7 @@ INSERT_COLUMNS = [
     "run_id",
     "timestamp",
     "gpu_type",
+    "cloud",
     "model",
     "engine",
     "context_band",
@@ -149,6 +151,7 @@ INSERT_COLUMNS = [
 
 GROUPABLE_COLUMNS = {
     "gpu_type",
+    "cloud",
     "model",
     "engine",
     "context_band",
@@ -171,6 +174,7 @@ GROUPABLE_COLUMNS = {
 DEFAULT_QUERY_COLUMNS = [
     "timestamp",
     "gpu_type",
+    "cloud",
     "model",
     "engine",
     "context_band",
@@ -196,7 +200,17 @@ def parse_args() -> argparse.Namespace:
     ingest = subparsers.add_parser("ingest", help="Read a processed ISB1 JSON file and insert a benchmark run.")
     ingest.add_argument("json_file", help="Path to utils/process_result_isb1.py output JSON.")
     ingest.add_argument("--db-path", default=str(DEFAULT_DB_PATH), help="SQLite DB path.")
-    ingest.add_argument("--gpu-type", required=True, choices=["h100", "h200", "b200"])
+    ingest.add_argument(
+        "--gpu-type",
+        required=True,
+        choices=["h100", "h200", "b200", "b300", "gb200", "gb300"],
+    )
+    ingest.add_argument(
+        "--cloud",
+        default="gmi",
+        choices=["gmi", "aws"],
+        help="Cloud provider that hosted this Lane B run (default: gmi).",
+    )
     ingest.add_argument("--model", required=True, choices=["qwen3.5", "gptoss", "dsr1"])
     ingest.add_argument("--engine", required=True, choices=["vllm", "sglang"])
     ingest.add_argument("--context-band", required=True, choices=["8k", "32k", "64k", "131k", "500k", "1m"])
@@ -297,6 +311,9 @@ _MIGRATIONS = [
     f"ALTER TABLE {TABLE_NAME} ADD COLUMN mechanism_notes TEXT",
     f"ALTER TABLE {TABLE_NAME} ADD COLUMN mechanism_eval_registered INTEGER",
     f"ALTER TABLE {TABLE_NAME} ADD COLUMN quality_eval_registered INTEGER",
+    # Lane B cloud label (gmi|aws). Added after initial Lane B landed so
+    # existing rows migrate to NULL and get backfilled by downstream jobs.
+    f"ALTER TABLE {TABLE_NAME} ADD COLUMN cloud TEXT",
 ]
 
 
@@ -307,12 +324,17 @@ def ensure_db(conn: sqlite3.Connection) -> None:
         f"CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_grouping "
         f"ON {TABLE_NAME}(gpu_type, model, engine, context_band, status)"
     )
-    # Idempotent migrations for existing databases
+    # Idempotent migrations for existing databases. Only swallow the
+    # specific "duplicate column name" error SQLite raises when a column
+    # is already present — every other OperationalError (locks, disk IO,
+    # malformed schema) must surface so real migration failures aren't
+    # masked as a no-op.
     for migration_sql in _MIGRATIONS:
         try:
             conn.execute(migration_sql)
-        except sqlite3.OperationalError:
-            pass  # Column already exists
+        except sqlite3.OperationalError as exc:
+            if "duplicate column" not in str(exc).lower():
+                raise
     conn.commit()
 
 
@@ -428,6 +450,7 @@ def insert_run(args: argparse.Namespace) -> None:
         "run_id": args.run_id or str(uuid.uuid4()),
         "timestamp": args.timestamp or utc_now_iso(),
         "gpu_type": args.gpu_type,
+        "cloud": choose(getattr(args, "cloud", None), payload.get("cloud")),
         "model": args.model,
         "engine": args.engine,
         "context_band": args.context_band,

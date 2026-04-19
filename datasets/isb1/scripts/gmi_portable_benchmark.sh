@@ -5,7 +5,8 @@ usage() {
   cat <<'EOF'
 Usage:
   gmi_portable_benchmark.sh \
-    --gpu-type <h100|h200|b200> \
+    --gpu-type <h100|h200|b200|b300|gb200|gb300> \
+    [--cloud <gmi|aws>] \
     --model <qwen3.5|gptoss|dsr1> \
     --engine <vllm|sglang> \
     --context-band <8k|32k|64k|131k|500k|1m> \
@@ -27,8 +28,15 @@ Optional environment:
   TP                      Tensor parallelism (default: 8)
   HEALTH_TIMEOUT_S        Readiness timeout in seconds (default: 1800)
   HEALTH_POLL_INTERVAL_S  Readiness poll interval (default: 10)
-  BENCHMARK_OUTPUT_ROOT   Output root (default: <repo>/datasets/isb1/results/gmi)
+  BENCHMARK_OUTPUT_ROOT   Output root (default: <repo>/datasets/isb1/results/<cloud>)
   GMI_RUN_LABEL           Optional suffix added to result names
+  LANEB_IMAGE_<CLOUD>_<GPU>_<ENGINE>
+                          Override the container image for a specific
+                          (cloud,gpu,engine) tuple (e.g. LANEB_IMAGE_GMI_GB200_VLLM).
+                          Required for GB200, B300, and GB300 — no pinned
+                          public tags yet for aarch64 or Blackwell Ultra.
+  LANEB_IMAGE_<GPU>_<ENGINE>
+                          Cloud-agnostic fallback image override.
 EOF
 }
 
@@ -44,16 +52,24 @@ require_cmd() {
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../../.." && pwd)
 source "$REPO_ROOT/benchmarks/benchmark_lib.sh"
+# Shared Lane B helpers (GPU/cloud validators, runner/profile/image mappers).
+source "$SCRIPT_DIR/_gmi_common.sh"
 PORT=${PORT:-8000}
 TP=${TP:-8}
 HEALTH_TIMEOUT_S=${HEALTH_TIMEOUT_S:-1800}
 HEALTH_POLL_INTERVAL_S=${HEALTH_POLL_INTERVAL_S:-10}
-BENCHMARK_OUTPUT_ROOT=${BENCHMARK_OUTPUT_ROOT:-"$REPO_ROOT/datasets/isb1/results/gmi"}
+# BENCHMARK_OUTPUT_ROOT is finalized after CLI parsing so it can be
+# cloud-namespaced (results/<cloud>/...). The explicit env override still
+# wins if the operator sets one.
+BENCHMARK_OUTPUT_ROOT_OVERRIDE=${BENCHMARK_OUTPUT_ROOT:-}
 REQUEST_MODE=multi-turn
 HARNESS_REQUEST_MODE=auto
 IGNORE_WAITS=true
+GMI_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+DISPATCH_REF_VALUE=${DISPATCH_REF:-manual:gmi-portable}
 
 GPU_TYPE=""
+CLOUD="gmi"
 MODEL_KEY=""
 ENGINE=""
 CONTEXT_BAND=""
@@ -71,6 +87,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --gpu-type)
       GPU_TYPE="$2"
+      shift 2
+      ;;
+    --cloud)
+      CLOUD="$2"
       shift 2
       ;;
     --model)
@@ -137,10 +157,8 @@ done
 [[ -n "$CONTEXT_BAND" ]] || die "--context-band is required"
 [[ -n "$WORKLOAD" ]] || die "--workload is required"
 
-case "$GPU_TYPE" in
-  h100|h200|b200) ;;
-  *) die "Unsupported --gpu-type: $GPU_TYPE" ;;
-esac
+validate_gpu_type "$GPU_TYPE" || die "Unsupported --gpu-type: $GPU_TYPE"
+validate_cloud "$CLOUD" || die "Unsupported --cloud: $CLOUD"
 
 case "$ENGINE" in
   vllm|sglang) ;;
@@ -227,35 +245,46 @@ case "$MODEL_KEY" in
     ;;
 esac
 
-case "$GPU_TYPE" in
-  b200)
-    HARDWARE_PROFILE_ID="nvidia:b200_sxm_180gb"
-    RUNNER_TYPE="b200-gmi-baremetal"
-    ;;
-  h100)
-    HARDWARE_PROFILE_ID="nvidia:h100_sxm_80gb"
-    RUNNER_TYPE="h100-gmi-baremetal"
-    ;;
-  h200)
-    HARDWARE_PROFILE_ID="nvidia:h200_sxm_141gb"
-    RUNNER_TYPE="h200-gmi-baremetal"
-    ;;
-esac
+HARDWARE_PROFILE_ID=$(laneb_hardware_profile_id "$GPU_TYPE") \
+  || die "Failed to resolve hardware_profile_id for $GPU_TYPE"
+RUNNER_TYPE=$(laneb_runner_type "$GPU_TYPE" "$CLOUD") \
+  || die "Failed to resolve runner type for $GPU_TYPE/$CLOUD"
+GPU_AARCH64=$(laneb_gpu_aarch64 "$GPU_TYPE")
 
 case "$ENGINE" in
-  vllm)
-    RUNTIME_STACK_ID="standalone:vllm"
-    if [[ "$GPU_TYPE" == "b200" ]]; then
-      IMAGE="vllm/vllm-openai:v0.19.0-cu130"
-    else
-      IMAGE="vllm/vllm-openai:v0.18.0"
-    fi
-    ;;
-  sglang)
-    RUNTIME_STACK_ID="standalone:sglang"
-    IMAGE="lmsysorg/sglang:v0.5.9-cu130"
-    ;;
+  vllm)   RUNTIME_STACK_ID="standalone:vllm" ;;
+  sglang) RUNTIME_STACK_ID="standalone:sglang" ;;
 esac
+
+# Image resolution: env override first, falling back to cloud-agnostic
+# defaults. GB200, B300, and GB300 have no pinned defaults; require the
+# caller to set LANEB_IMAGE_<CLOUD>_<GPU>_<ENGINE> (or the cloud-agnostic
+# LANEB_IMAGE_<GPU>_<ENGINE>).
+# Using `if ! ...` instead of `$(...) || die` avoids bash `errexit` foot-guns
+# around command substitution exit codes in strict-mode scripts.
+if ! IMAGE=$(laneb_resolve_image "$CLOUD" "$GPU_TYPE" "$ENGINE"); then
+  die "Failed to resolve image for cloud=$CLOUD gpu=$GPU_TYPE engine=$ENGINE"
+fi
+if [[ -z "$IMAGE" ]]; then
+  cloud_up=$(printf '%s' "$CLOUD" | tr '[:lower:]' '[:upper:]')
+  gpu_up=$(printf '%s' "$GPU_TYPE" | tr '[:lower:]' '[:upper:]')
+  engine_up=$(printf '%s' "$ENGINE" | tr '[:lower:]' '[:upper:]')
+  die "No container image resolved for cloud=$CLOUD gpu=$GPU_TYPE engine=$ENGINE. \
+Set LANEB_IMAGE_${cloud_up}_${gpu_up}_${engine_up} or LANEB_IMAGE_${gpu_up}_${engine_up}."
+fi
+
+# Host arch preflight: warn if aarch64 GPU is launched from an x86 host
+# (or vice versa). We don't die — operator might intentionally run under
+# qemu-user, but we want the mismatch visible before `docker run`.
+host_arch=$(uname -m 2>/dev/null || printf '')
+if [[ "$GPU_AARCH64" == "1" ]]; then
+  expected_arch="aarch64"
+else
+  expected_arch="x86_64"
+fi
+if [[ -n "$host_arch" && "$host_arch" != "$expected_arch" ]]; then
+  echo "WARNING: gpu=$GPU_TYPE expects host arch '$expected_arch' but uname -m reports '$host_arch'" >&2
+fi
 
 case "$CONTEXT_BAND" in
   8k)
@@ -511,6 +540,18 @@ case "$ENGINE" in
         SGLANG_MEM_FRACTION_STATIC=0.85
         SGLANG_CHUNKED_PREFILL_SIZE=32768
         ;;
+      gb200)
+        # Explicit branch (previously fell through — latent bug). Same
+        # 192GB Grace-attached envelope as b200 standard Blackwell.
+        SGLANG_MEM_FRACTION_STATIC=0.85
+        SGLANG_CHUNKED_PREFILL_SIZE=32768
+        ;;
+      b300|gb300)
+        # Blackwell Ultra (288GB). Same tuning envelope as b200/gb200
+        # is safe — the 500k/1m override below clamps anyway.
+        SGLANG_MEM_FRACTION_STATIC=0.85
+        SGLANG_CHUNKED_PREFILL_SIZE=32768
+        ;;
     esac
     if [[ "$CONTEXT_BAND" == "500k" || "$CONTEXT_BAND" == "1m" ]]; then
       SGLANG_MEM_FRACTION_STATIC=0.85
@@ -524,16 +565,34 @@ SAFE_CONTEXT=${CONTEXT_BAND//[^[:alnum:]]/_}
 SAFE_MODEL=${MODEL_KEY//[^[:alnum:]._-]/_}
 SAFE_ENGINE=${ENGINE//[^[:alnum:]._-]/_}
 SAFE_GPU=${GPU_TYPE//[^[:alnum:]._-]/_}
+SAFE_CLOUD=${CLOUD//[^[:alnum:]._-]/_}
 SAFE_WORKLOAD=${WORKLOAD//[^[:alnum:]._-]/_}
 RUN_LABEL=${GMI_RUN_LABEL:-}
 if [[ -n "$RUN_LABEL" ]]; then
   RUN_LABEL="-${RUN_LABEL//[^[:alnum:]._-]/_}"
 fi
-RESULT_STEM="gmi-${SAFE_GPU}-${SAFE_MODEL}-${SAFE_ENGINE}-${SAFE_WORKLOAD}-${SAFE_CONTEXT}-${DATE_STAMP}${RUN_LABEL}"
+# RESULT_STEM back-compat: cloud=gmi keeps the legacy `gmi-...` prefix so
+# grep-based consumers (operator scripts, log scrapers) continue to work.
+# New clouds use `laneb-<cloud>-...`.
+if [[ "$CLOUD" == "gmi" ]]; then
+  RESULT_STEM="gmi-${SAFE_GPU}-${SAFE_MODEL}-${SAFE_ENGINE}-${SAFE_WORKLOAD}-${SAFE_CONTEXT}-${DATE_STAMP}${RUN_LABEL}"
+else
+  RESULT_STEM="laneb-${SAFE_CLOUD}-${SAFE_GPU}-${SAFE_MODEL}-${SAFE_ENGINE}-${SAFE_WORKLOAD}-${SAFE_CONTEXT}-${DATE_STAMP}${RUN_LABEL}"
+fi
+
+# Finalize BENCHMARK_OUTPUT_ROOT per-cloud unless the operator overrode it.
+# Keeps cloud=gmi at the existing path (results/gmi) for back-compat, and
+# routes cloud=aws|... under results/<cloud>/.
+if [[ -n "$BENCHMARK_OUTPUT_ROOT_OVERRIDE" ]]; then
+  BENCHMARK_OUTPUT_ROOT="$BENCHMARK_OUTPUT_ROOT_OVERRIDE"
+else
+  BENCHMARK_OUTPUT_ROOT="$REPO_ROOT/datasets/isb1/results/$CLOUD"
+fi
 RUN_DIR="$BENCHMARK_OUTPUT_ROOT/$RESULT_STEM"
 SERVER_LOG="$RUN_DIR/server.log"
 SUMMARY_JSON="$RUN_DIR/agg_${RESULT_STEM}.json"
 TRACE_REPLAY_SUMMARY_JSON="$RUN_DIR/trace_replay_summary.json"
+MANIFEST_JSON="$RUN_DIR/manifest.json"
 GPU_PROFILE_CSV="$RUN_DIR/${RESULT_STEM}_gpu_profile.csv"
 GPU_PROFILER_PID=""
 GPU_MEM_PEAK=0
@@ -553,6 +612,56 @@ stop_gpu_profiler() {
     wait "$GPU_PROFILER_PID" >/dev/null 2>&1 || true
     GPU_PROFILER_PID=""
   fi
+}
+
+write_gmi_manifest() {
+  local completed_at
+  local git_commit
+  local gpu_arch
+
+  completed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  git_commit=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || printf '')
+  gpu_arch=$(uname -m 2>/dev/null || printf '')
+
+  python3 - \
+    "$MANIFEST_JSON" \
+    "$DISPATCH_REF_VALUE" \
+    "$BENCHMARK_TYPE" \
+    "$MODEL_HF_ID" \
+    "$ENGINE" \
+    "$RUNNER_TYPE" \
+    "$GMI_STARTED_AT" \
+    "$completed_at" \
+    "${IMAGE:-}" \
+    "$git_commit" \
+    "$CLOUD" \
+    "$GPU_TYPE" \
+    "$gpu_arch" \
+    "$GPU_AARCH64" <<'PY'
+import json
+import sys
+
+payload = {
+    "execution_mode": "direct",
+    "dispatch_ref": sys.argv[2] or "manual:gmi-portable",
+    "benchmark_type": sys.argv[3] or None,
+    "model": sys.argv[4] or "",
+    "framework": sys.argv[5] or "",
+    "hw": sys.argv[6] or "",
+    "started_at": sys.argv[7] or None,
+    "completed_at": sys.argv[8] or None,
+    "container_image": sys.argv[9] or "",
+    "git_commit": sys.argv[10] or "",
+    "cloud": sys.argv[11] or None,
+    "gpu_type": sys.argv[12] or None,
+    "gpu_arch": sys.argv[13] or None,
+    "gpu_aarch64": sys.argv[14] == "1",
+    "srt_slurm_pins": None,
+}
+with open(sys.argv[1], "w", encoding="utf-8") as f:
+    json.dump(payload, f, indent=2, sort_keys=True)
+    f.write("\n")
+PY
 }
 
 cleanup() {
@@ -709,9 +818,11 @@ wait_for_server_ready() {
   done
 }
 
-echo "==> GMI portable benchmark"
+echo "==> Lane B portable benchmark"
 echo "repo:                 $REPO_ROOT"
-echo "gpu-type:             $GPU_TYPE"
+echo "cloud:                $CLOUD"
+echo "gpu-type:             $GPU_TYPE (aarch64=$GPU_AARCH64)"
+echo "runner-type:          $RUNNER_TYPE"
 echo "model:                $MODEL_KEY ($MODEL_HF_ID)"
 echo "engine:               $ENGINE"
 echo "context-band:         $CONTEXT_BAND"
@@ -778,6 +889,8 @@ if [[ "$TRACE_SOURCE" == "isb1" ]]; then
     --metadata "gmi_engine=$ENGINE"
     --metadata "gmi_context_band=$CONTEXT_BAND"
     --metadata "gmi_workload=$WORKLOAD"
+    --metadata "laneb_cloud=$CLOUD"
+    --metadata "execution_mode=direct"
     --trust-remote-code
   )
   if [[ -n "$BENCHMARK_DURATION_S" ]]; then
@@ -845,6 +958,7 @@ echo "==> Processing ISB1 result"
 (
   cd "$RUN_DIR"
   export RUNNER_TYPE="$RUNNER_TYPE"
+  export CLOUD="$CLOUD"
   export FRAMEWORK="$ENGINE"
   export PRECISION="$PRECISION"
   export RESULT_FILENAME="$RESULT_STEM"
@@ -863,7 +977,7 @@ echo "==> Processing ISB1 result"
   export WORKLOAD_TYPE="$WORKLOAD"
   export MAX_CONCURRENCY="$MAX_CONCURRENCY"
   export IGNORE_WAITS="$IGNORE_WAITS"
-  export DISPATCH_REF="manual:gmi-portable"
+  export DISPATCH_REF="$DISPATCH_REF_VALUE"
   export MAX_MODEL_LEN="$MAX_MODEL_LEN"
   export OFFLOAD_MODE="${OFFLOAD_MODE:-}"
   export KV_CACHE_DTYPE="${KV_CACHE_DTYPE:-}"
@@ -939,10 +1053,13 @@ with open(sys.argv[1], "w", encoding="utf-8") as f:
 PY
 fi
 
+write_gmi_manifest
+
 if [[ -f "$SUMMARY_JSON" ]] && command -v python3 >/dev/null 2>&1; then
   db_ingest_cmd=(
     python3 "$SCRIPT_DIR/isb1_results_db.py" ingest "$SUMMARY_JSON"
     --gpu-type "$GPU_TYPE"
+    --cloud "$CLOUD"
     --model "$MODEL_KEY"
     --engine "$ENGINE"
     --context-band "$CONTEXT_BAND"
