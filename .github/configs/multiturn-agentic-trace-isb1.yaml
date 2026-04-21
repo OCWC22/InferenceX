@@ -1,0 +1,54 @@
+# ISB1 sweep cells for Cam's kv-cache-tester replay flow.
+# Schema mirrors .github/configs/multiturn-agentic-trace.yaml.
+# Merge these top-level keys into that file (or extend the sweep workflow
+# to glob .github/configs/multiturn-agentic-trace*.yaml) to include ISB1 sweeps.
+# 8k code cells map to datasets/isb1/converted/core/code_8k1k/.
+# 32k chat cells map to datasets/isb1/converted/extension_32k/chat_32k1k*/.
+# 131k code/chat cells map to datasets/isb1/converted/extension_131k/*_131k1k*/.
+# 500k preview cells map to datasets/isb1/converted/preview/long_context_500k/.
+# 1m preview cells map to datasets/isb1/converted/preview/long_context_1m/.
+# Expected TRACE_DIR is either datasets/isb1/converted/ or one of those subdirs.
+
+h200-fp8-qwen3-isb1-code-8k:
+  tp2: {users: [2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+  tp4: {users: [2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+
+h200-fp8-qwen3-isb1-chat-32k:
+  tp2: {users: [1, 2, 4, 8, 16, 32], offload: ["on", "off"]}
+  tp4: {users: [1, 2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+
+h200-fp8-qwen3-isb1-code-131k:
+  tp4: {users: [1, 2, 4, 8], offload: ["on", "off"]}
+  tp8: {users: [1, 2, 4, 8, 16], offload: ["on", "off"]}
+
+b200-fp4-dsr1-isb1-code-8k:
+  tp4: {ep: 4, users: [4, 8, 16, 32, 64, 128, 256], offload: ["on", "off"]}
+  tp8: {ep: 8, users: [8, 16, 32, 64, 128, 256, 512], offload: ["on", "off"]}
+
+b200-fp4-dsr1-isb1-chat-32k:
+  tp4: {ep: 4, users: [1, 2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+
+b200-fp4-dsr1-isb1-code-131k:
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16], offload: ["on", "off"]}
+
+b200-fp4-qwen3-isb1-chat-500k-preview:
+  tp4: {users: [1, 2, 4], offload: ["on", "off"]}
+  tp8: {users: [1, 2, 4, 8], offload: ["on", "off"]}
+
+b200-fp4-qwen3-isb1-chat-1m-preview:
+  tp8: {users: [1, 2], offload: ["on", "off"]}
+
+mi355x-fp8-qwen3-isb1-code-8k:
+  tp2: {users: [2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+  tp4: {users: [2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+
+mi355x-fp8-qwen3-isb1-chat-32k:
+  tp4: {users: [1, 2, 4, 8, 16, 32], offload: ["on", "off"]}
+
+h100-fp8-qwen3-isb1-code-8k-lmcache:
+  tp2: {users: [1, 2, 4, 8, 16, 32], offload: ["on", "off"]}
+  tp4: {users: [1, 2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+
+h200-fp8-qwen3-isb1-debug:
+  tp2: {users: [2], offload: ["off"]}
