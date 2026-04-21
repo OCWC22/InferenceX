@@ -4,11 +4,8 @@ This directory is the InferenceX-side consumer package for ISB1 replay.
 
 InferenceX consumes committed file artifacts only:
 - replay export JSON bundles under `datasets/isb1/exports/`
-- conversion to SemiAnalysis's `kv-cache-tester` format via
-  [`tools/isb1_to_kvcache_tester.py`](../../tools/isb1_to_kvcache_tester.py)
+- replay via [`tools/isb1_to_kvcache_tester.py`](../../tools/isb1_to_kvcache_tester.py) + Cam's [`kv-cache-tester`](https://github.com/callanjfox/kv-cache-tester)
 - consumer configs in `.github/configs/isb1-*.yaml`
-- replay processing through `utils/bench_serving/benchmark_export_replay.py`
-- result normalization through `utils/process_result_isb1.py`
 
 InferenceX does **not** import external runtime code and does **not** make
 live-serving claims from export-file existence alone.
@@ -74,12 +71,7 @@ metadata.
 | `preview/long_context_500k/` | 4 + 2 manifests | 500K chat/code × {gptoss, qwen3.5} |
 | `preview/long_context_1m/` | 2 + 1 manifest | 1M chat/code × qwen3.5 |
 
-All export files are valid JSON and replay-hydratable via
-`utils/bench_serving/benchmark_export_replay.py`.
-
-All bundles can also be converted to SemiAnalysis's `kv-cache-tester`
-per-conversation trace format via [`tools/isb1_to_kvcache_tester.py`](../../tools/isb1_to_kvcache_tester.py);
-see [How to consume](#how-to-consume).
+All export files are valid JSON and can be consumed via [`tools/isb1_to_kvcache_tester.py`](../../tools/isb1_to_kvcache_tester.py) + Cam's [`kv-cache-tester`](https://github.com/callanjfox/kv-cache-tester); see [How to consume](#how-to-consume).
 
 ---
 
@@ -121,19 +113,9 @@ Unsafe claims:
 
 ## How to consume
 
-Two consumption paths are supported, both fed from the same committed bundles:
+The supported consumption path is [`tools/isb1_to_kvcache_tester.py`](../../tools/isb1_to_kvcache_tester.py) + Cam's [`kv-cache-tester`](https://github.com/callanjfox/kv-cache-tester) `trace_replay_tester.py --trace-directory` flow.
 
-1. **InferenceX-internal replay** — `utils/bench_serving/benchmark_export_replay.py`
-   directly, with `utils/process_result_isb1.py` for result normalization.
-2. **SemiAnalysis `kv-cache-tester`** — convert via
-   [`tools/isb1_to_kvcache_tester.py`](../../tools/isb1_to_kvcache_tester.py),
-   then feed the resulting directory to
-   [`trace_replay_tester.py --trace-directory`](https://github.com/callanjfox/kv-cache-tester)
-   (PR #993 submodule).
-
-Path 2 is documented here because it is the path that lets ISB1 traces plug
-into SemiAnalysis's existing Slurm benchmarking pipeline without the consumer
-having to read our replay code.
+This is the path that lets ISB1 traces plug into SemiAnalysis's existing Slurm benchmarking pipeline without the consumer having to read any InferenceX-local replay harness.
 
 ### Step 1 — fetch the bundles (LFS)
 

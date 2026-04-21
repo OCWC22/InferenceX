@@ -68,7 +68,7 @@ Whole directory tree (reproduces the ``traces_isb1/<band>/<bundle>/`` layout):
         --export-root datasets/isb1/exports/ \
         --output-dir  traces_isb1/
 
-Filters (subset by cell, matching ``benchmark_export_replay.py`` semantics):
+Filters (subset by cell, matching the legacy replay-loader semantics):
 
     python tools/isb1_to_kvcache_tester.py \
         --export-file datasets/isb1/exports/core/chat_8k1k.json \
@@ -110,13 +110,13 @@ FALLBACK_OUTPUT_TOKENS = 256  # used only if the bundle has no expected_output_t
 
 
 # -----------------------------------------------------------------------------
-# Token counting (stdlib-only, matches benchmark_export_replay._fallback_text_token_count)
+# Token counting (stdlib-only, matches the legacy replay-harness fallback token count)
 # -----------------------------------------------------------------------------
 
 def _fallback_text_token_count(text: str) -> int:
     """Approximate token count (≈ 4 chars / token).
 
-    This matches the fallback path in ``utils/bench_serving/benchmark_export_replay.py``
+    This matches the fallback path in the legacy replay harness
     and mirrors Cam's tester, which does its own tokenization at replay time
     from synthetic content. The only thing this shim must emit accurately is
     the *block count* (``ceil(in_tokens / block_size)``); a ~10-20% error in
@@ -130,7 +130,7 @@ def _fallback_text_token_count(text: str) -> int:
 
 
 # -----------------------------------------------------------------------------
-# Message flattening (mirrors benchmark_export_replay._extract_message_text)
+# Message flattening (mirrors the legacy replay-harness message extraction)
 # -----------------------------------------------------------------------------
 
 def _render_block_as_text(block: dict[str, Any]) -> str:
@@ -237,7 +237,7 @@ def _load_prefix_artifact(
 
 def _merge_prefix_into_cell(cell: dict[str, Any], prefix_payload: dict[str, Any]) -> None:
     # Schema 0.2.0 bundles store events in the prefix artifact; merge back in-place.
-    # (Mirrors benchmark_export_replay._merge_prefix_into_trace_replay_cell.)
+    # (Mirrors the legacy replay-harness prefix merge behavior.)
     prefix_events = prefix_payload.get("events") or []
     cell.setdefault("events", []).extend(prefix_events)
     # Also merge trace_metadata if the prefix carries extras; preserve cell priority.
@@ -470,7 +470,7 @@ def _build_trace(
 
 
 # -----------------------------------------------------------------------------
-# Filter logic (subset of benchmark_export_replay.load_replay_sessions)
+# Filter logic (subset of the legacy replay session-loader semantics)
 # -----------------------------------------------------------------------------
 
 def _matches(value: Any, allowed: set[str] | None) -> bool:
