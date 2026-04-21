@@ -19,14 +19,19 @@ following shape:
 
     {
       "session_id":    "<conversation identifier>",
-      "model":         "<canonical model id>",        # optional
-      "input":         [
+      "model":         "<canonical model id>",        # optional, extra field (ignored by aiperf)
+      "messages":      [
                            {"role": "user", "content": "..."},
                            {"role": "assistant", "content": "..."},
                          ],
       "output_length": 256,
-      "pre_gap":       1.5                             # optional, seconds
+      "delay":         1500                            # optional, MILLISECONDS
     }
+
+The field names above (`messages` and `delay`) are what aiperf's
+`MooncakeTrace` pydantic model validates (see
+`aiperf/dataset/loader/models.py`). `model` is retained for traceability
+and accepted as an extra field by `AIPerfBaseModel(extra="allow")`.
 
 ISB1 exports store turn history in `events[].input_messages` with typed
 `content_blocks`. This exporter flattens those blocks into plain text strings:
@@ -279,7 +284,7 @@ def _session_id_for_event(
     return f"{bundle_id}::{base_session_id}"
 
 
-def _event_pre_gap(
+def _event_delay_ms(
     *,
     bundle_id: str,
     export_idx: int,
@@ -289,6 +294,12 @@ def _event_pre_gap(
     prior_offsets_ms: dict[str, int],
     warnings: WarningTracker,
 ) -> float:
+    """Compute the inter-turn delay in MILLISECONDS for aiperf's `delay` field.
+
+    aiperf's `MooncakeTrace.delay` is specified in milliseconds (see upstream
+    loader schema). First event in a session returns 0.0; negative deltas are
+    clamped to 0.0 with a warning.
+    """
     prior = prior_offsets_ms.get(session_id)
     prior_offsets_ms[session_id] = arrival_time_offset_ms
     if prior is None:
@@ -298,17 +309,17 @@ def _event_pre_gap(
     if delta_ms < 0:
         warnings.warn(
             f"bundle {bundle_id} export[{export_idx}] event[{event_idx}] session {session_id!r} "
-            f"has negative arrival delta ({delta_ms} ms); clamping pre_gap to 0.0"
+            f"has negative arrival delta ({delta_ms} ms); clamping delay to 0.0"
         )
         return 0.0
-    return delta_ms / 1000.0
+    return float(delta_ms)
 
 
 def _convert_bundle(
     *,
     bundle_path: Path,
     include_model: bool,
-    include_pre_gap: bool,
+    include_delay: bool,
     seen_session_owners: dict[str, str],
     warned_collisions: set[tuple[str, str]],
     warnings: WarningTracker,
@@ -397,13 +408,13 @@ def _convert_bundle(
 
             row: dict[str, Any] = {
                 "session_id": session_id,
-                "input": flattened_messages,
+                "messages": flattened_messages,
                 "output_length": output_length,
             }
             if include_model:
                 row["model"] = str(canonical_model_id)
-            if include_pre_gap:
-                row["pre_gap"] = _event_pre_gap(
+            if include_delay:
+                row["delay"] = _event_delay_ms(
                     bundle_id=bundle_id,
                     export_idx=export_idx,
                     event_idx=event_idx,
@@ -460,10 +471,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="Include the model field in emitted rows (default: on).",
     )
     parser.add_argument(
-        "--include-pre-gap",
+        "--include-delay",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Include the pre_gap field in emitted rows (default: on).",
+        help="Include the delay field (milliseconds) in emitted rows (default: on).",
     )
     return parser.parse_args(argv)
 
@@ -500,7 +511,7 @@ def main(argv: list[str] | None = None) -> int:
             bundle_id, rows, bundle_sessions = _convert_bundle(
                 bundle_path=bundle_path,
                 include_model=args.include_model,
-                include_pre_gap=args.include_pre_gap,
+                include_delay=args.include_delay,
                 seen_session_owners=seen_session_owners,
                 warned_collisions=warned_collisions,
                 warnings=warnings,

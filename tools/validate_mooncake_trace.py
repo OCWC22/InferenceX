@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import Any
 
 VALID_ROLES = {"user", "assistant", "system", "tool"}
-REQUIRED_FIELDS = {"session_id", "input", "output_length"}
-OPTIONAL_SUPERSET_FIELDS = {"model", "pre_gap"}
+REQUIRED_FIELDS = {"session_id", "messages", "output_length"}
+OPTIONAL_SUPERSET_FIELDS = {"model", "delay"}
 CHECK = "✓"
 CROSS = "✗"
 WARN = "!"
@@ -122,10 +122,10 @@ def validate_row(
         _add_issue(errors, f"line {line_no}: session_id must be non-empty str", max_issues)
         categories["missing_session_id"] += 1
 
-    input_messages = row.get("input")
+    input_messages = row.get("messages")
     if not isinstance(input_messages, list) or not input_messages:
-        _add_issue(errors, f"line {line_no}: input must be a non-empty list", max_issues)
-        categories["invalid_input"] += 1
+        _add_issue(errors, f"line {line_no}: messages must be a non-empty list", max_issues)
+        categories["invalid_messages"] += 1
         input_messages = []
 
     for message_idx, message in enumerate(input_messages):
@@ -149,14 +149,14 @@ def validate_row(
         _add_issue(errors, f"line {line_no}: model must be str", max_issues)
         categories["invalid_model"] += 1
 
-    if "pre_gap" in row:
-        pre_gap = row.get("pre_gap")
-        if not _is_number(pre_gap):
-            _add_issue(errors, f"line {line_no}: pre_gap must be non-negative float", max_issues)
-            categories["invalid_pre_gap"] += 1
-        elif float(pre_gap) < 0.0:
-            _add_issue(errors, f"line {line_no}: pre_gap must be >= 0.0", max_issues)
-            categories["invalid_pre_gap"] += 1
+    if "delay" in row:
+        delay = row.get("delay")
+        if not _is_number(delay):
+            _add_issue(errors, f"line {line_no}: delay must be a non-negative number (milliseconds)", max_issues)
+            categories["invalid_delay"] += 1
+        elif float(delay) < 0.0:
+            _add_issue(errors, f"line {line_no}: delay must be >= 0.0", max_issues)
+            categories["invalid_delay"] += 1
 
     return errors, warnings, categories
 
@@ -191,7 +191,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--allow-superset",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Allow the optional mooncake superset fields model and pre_gap (default: on).",
+        help="Allow the optional mooncake superset fields model and delay (default: on).",
     )
     return parser.parse_args(argv)
 

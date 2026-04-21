@@ -123,8 +123,8 @@ class MooncakeExporterTests(unittest.TestCase):
             self.assertEqual(rows[0]["session_id"], "sess-single")
             self.assertEqual(rows[0]["model"], "model-a")
             self.assertEqual(rows[0]["output_length"], 42)
-            self.assertEqual(rows[0]["pre_gap"], 0.0)
-            self.assertEqual(rows[0]["input"], [{"role": "user", "content": "hello world"}])
+            self.assertEqual(rows[0]["delay"], 0.0)
+            self.assertEqual(rows[0]["messages"], [{"role": "user", "content": "hello world"}])
 
     def test_multi_turn_session_rows_grouped_by_session_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -148,8 +148,8 @@ class MooncakeExporterTests(unittest.TestCase):
             self.assertEqual(exit_code, 0, stderr)
             rows = _load_jsonl(out_dir / "bundle_grouped.jsonl")
             self.assertEqual([row["session_id"] for row in rows], ["sess-grouped", "sess-grouped"])
-            self.assertEqual(rows[0]["input"][0]["content"], "turn one")
-            self.assertEqual(rows[1]["input"][0]["content"], "turn two")
+            self.assertEqual(rows[0]["messages"][0]["content"], "turn one")
+            self.assertEqual(rows[1]["messages"][0]["content"], "turn two")
 
     def test_content_blocks_text_flattening(self) -> None:
         blocks = [_text_block("alpha"), _text_block("beta")]
@@ -186,7 +186,7 @@ class MooncakeExporterTests(unittest.TestCase):
             exit_code, _, stderr = self._run_main(str(bundle_path), out_dir)
             self.assertEqual(exit_code, 0, stderr)
             rows = _load_jsonl(out_dir / "bundle_tool.jsonl")
-            self.assertEqual(rows[0]["input"], [{"role": "tool", "content": "[tool_call: ls -R repo/]"}])
+            self.assertEqual(rows[0]["messages"], [{"role": "tool", "content": "[tool_call: ls -R repo/]"}])
 
     def test_empty_content_blocks_skip_event_with_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -213,7 +213,7 @@ class MooncakeExporterTests(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["session_id"], "sess-valid")
 
-    def test_pre_gap_delta_computation_across_consecutive_events(self) -> None:
+    def test_delay_ms_computation_across_consecutive_events(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             out_dir = root / "out"
@@ -234,9 +234,9 @@ class MooncakeExporterTests(unittest.TestCase):
             exit_code, _, stderr = self._run_main(str(bundle_path), out_dir)
             self.assertEqual(exit_code, 0, stderr)
             rows = _load_jsonl(out_dir / "bundle_gap.jsonl")
-            self.assertEqual(rows[1]["pre_gap"], 2.5)
+            self.assertEqual(rows[1]["delay"], 2500.0)
 
-    def test_first_event_in_session_has_zero_pre_gap(self) -> None:
+    def test_first_event_in_session_has_zero_delay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             out_dir = root / "out"
@@ -246,7 +246,7 @@ class MooncakeExporterTests(unittest.TestCase):
             exit_code, _, stderr = self._run_main(str(bundle_path), out_dir)
             self.assertEqual(exit_code, 0, stderr)
             rows = _load_jsonl(out_dir / "bundle_first.jsonl")
-            self.assertEqual(rows[0]["pre_gap"], 0.0)
+            self.assertEqual(rows[0]["delay"], 0.0)
 
     def test_negative_delta_is_clamped_to_zero_with_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -270,7 +270,7 @@ class MooncakeExporterTests(unittest.TestCase):
             self.assertEqual(exit_code, 0, stderr)
             self.assertIn("negative arrival delta", stderr)
             rows = _load_jsonl(out_dir / "bundle_negative_gap.jsonl")
-            self.assertEqual(rows[1]["pre_gap"], 0.0)
+            self.assertEqual(rows[1]["delay"], 0.0)
 
     def test_no_include_model_flag_strips_model_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -283,16 +283,16 @@ class MooncakeExporterTests(unittest.TestCase):
             rows = _load_jsonl(out_dir / "bundle_no_model.jsonl")
             self.assertNotIn("model", rows[0])
 
-    def test_no_include_pre_gap_flag_strips_pre_gap_field(self) -> None:
+    def test_no_include_delay_flag_strips_delay_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             out_dir = root / "out"
             bundle_path = self._write_bundle(root, "gap_off.json", _bundle("bundle_no_gap", exports=[_export("trace-gap-off", events=[_event(session_id="sess-no-gap")])]))
 
-            exit_code, _, stderr = self._run_main(str(bundle_path), out_dir, "--no-include-pre-gap")
+            exit_code, _, stderr = self._run_main(str(bundle_path), out_dir, "--no-include-delay")
             self.assertEqual(exit_code, 0, stderr)
             rows = _load_jsonl(out_dir / "bundle_no_gap.jsonl")
-            self.assertNotIn("pre_gap", rows[0])
+            self.assertNotIn("delay", rows[0])
 
     def test_dry_run_writes_nothing_to_disk(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
