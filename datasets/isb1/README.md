@@ -184,6 +184,230 @@ python $KV_CACHE_TESTER_DIR/trace_replay_tester.py \
     --start-users 2 --max-users 2 --test-duration 60
 ```
 
+
+### Sweep config recipe (local-only)
+
+Paste this block into Cam's `multiturn-agentic-trace.yaml` after Track A has already pre-converted bundles into `datasets/isb1/converted/`. It sweeps hardware × TP × users while pinning each cell to a concrete ISB1 bundle ID so you can reuse PR #993's trace replay path directly. We couldn't locate a checked-in `multiturn-agentic-trace.yaml` in this workspace, so keep the schema-alignment note below when you paste.
+
+```yaml
+name: isb1_multiturn_agentic
+traces_dir: datasets/isb1/converted/
+tokenizer: Qwen/Qwen2.5-Coder-32B-Instruct
+block_size: 64
+cells:
+  # TODO(cam): adjust field names to match multiturn-agentic-trace.yaml v1 if your local schema differs.
+
+  # H200 × TP {1,2,4} × users {1,4,16,64} on bundle code_8k1k
+  - name: code_8k1k_h200_tp1_users1
+    hardware: h200
+    tp: 1
+    users: 1
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp1_users4
+    hardware: h200
+    tp: 1
+    users: 4
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp1_users16
+    hardware: h200
+    tp: 1
+    users: 16
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp1_users64
+    hardware: h200
+    tp: 1
+    users: 64
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp2_users1
+    hardware: h200
+    tp: 2
+    users: 1
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp2_users4
+    hardware: h200
+    tp: 2
+    users: 4
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp2_users16
+    hardware: h200
+    tp: 2
+    users: 16
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp2_users64
+    hardware: h200
+    tp: 2
+    users: 64
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp4_users1
+    hardware: h200
+    tp: 4
+    users: 1
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp4_users4
+    hardware: h200
+    tp: 4
+    users: 4
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp4_users16
+    hardware: h200
+    tp: 4
+    users: 16
+    trace_filter: code_8k1k
+  - name: code_8k1k_h200_tp4_users64
+    hardware: h200
+    tp: 4
+    users: 64
+    trace_filter: code_8k1k
+
+  # MI355X × TP {1,2,4} × users {1,4,16,64} on bundle chat_32k1k
+  - name: chat_32k1k_mi355x_tp1_users1
+    hardware: mi355x
+    tp: 1
+    users: 1
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp1_users4
+    hardware: mi355x
+    tp: 1
+    users: 4
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp1_users16
+    hardware: mi355x
+    tp: 1
+    users: 16
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp1_users64
+    hardware: mi355x
+    tp: 1
+    users: 64
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp2_users1
+    hardware: mi355x
+    tp: 2
+    users: 1
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp2_users4
+    hardware: mi355x
+    tp: 2
+    users: 4
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp2_users16
+    hardware: mi355x
+    tp: 2
+    users: 16
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp2_users64
+    hardware: mi355x
+    tp: 2
+    users: 64
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp4_users1
+    hardware: mi355x
+    tp: 4
+    users: 1
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp4_users4
+    hardware: mi355x
+    tp: 4
+    users: 4
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp4_users16
+    hardware: mi355x
+    tp: 4
+    users: 16
+    trace_filter: chat_32k1k
+  - name: chat_32k1k_mi355x_tp4_users64
+    hardware: mi355x
+    tp: 4
+    users: 64
+    trace_filter: chat_32k1k
+
+  # B200 × TP {1,2,4,8} × users {1,4,16,64} on bundle chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp1_users1
+    hardware: b200
+    tp: 1
+    users: 1
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp1_users4
+    hardware: b200
+    tp: 1
+    users: 4
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp1_users16
+    hardware: b200
+    tp: 1
+    users: 16
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp1_users64
+    hardware: b200
+    tp: 1
+    users: 64
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp2_users1
+    hardware: b200
+    tp: 2
+    users: 1
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp2_users4
+    hardware: b200
+    tp: 2
+    users: 4
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp2_users16
+    hardware: b200
+    tp: 2
+    users: 16
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp2_users64
+    hardware: b200
+    tp: 2
+    users: 64
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp4_users1
+    hardware: b200
+    tp: 4
+    users: 1
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp4_users4
+    hardware: b200
+    tp: 4
+    users: 4
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp4_users16
+    hardware: b200
+    tp: 4
+    users: 16
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp4_users64
+    hardware: b200
+    tp: 4
+    users: 64
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp8_users1
+    hardware: b200
+    tp: 8
+    users: 1
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp8_users4
+    hardware: b200
+    tp: 8
+    users: 4
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp8_users16
+    hardware: b200
+    tp: 8
+    users: 16
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+  - name: chat_qwen3.5_ulc2_1m_preview_v1_b200_tp8_users64
+    hardware: b200
+    tp: 8
+    users: 64
+    trace_filter: chat_qwen3.5_ulc2_1m_preview_v1
+```
+
+Tokenizer default here is `Qwen/Qwen2.5-Coder-32B-Instruct` and `block_size: 64`; set `model_override` per cell when running DSR1/GPT-OSS/Qwen3.5-specific sweeps (for example: `deepseek-ai/DeepSeek-R1`, `openai/gpt-oss-120b`, or `Qwen/Qwen3.5-Next-80B-A3B-Instruct`).
+
+This YAML snippet lives in this README only, is local-only (not shipped via the PR), and is intended to be pre-merged with Cam's PR #993 workflow.
+
 ### Step 4 — verify the result
 
 ```bash
