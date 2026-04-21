@@ -1,0 +1,34 @@
+# ISB1 sweep cells for Cam's aiperf / mooncake_trace replay flow.
+# Schema mirrors .github/configs/multiturn-agentic-trace.yaml and
+# .github/configs/multiturn-agentic-trace-isb1.yaml.
+# 8k code cells expect MOONCAKE_INPUT=datasets/isb1/mooncake/core/code_8k1k/.
+# 32k chat cells expect MOONCAKE_INPUT=datasets/isb1/mooncake/extension_32k/chat_32k1k*/.
+# 131k code cells expect MOONCAKE_INPUT=datasets/isb1/mooncake/extension_131k/*_131k1k*/.
+# Preview 500k / 1m lanes are intentionally omitted in v1.
+
+h100-fp8-qwen3-isb1-mooncake-code-8k-lmcache:
+  tp2: {users: [1, 2, 4, 8, 16, 32], offload: ["on", "off"]}
+  tp4: {users: [1, 2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+
+h200-fp8-qwen3-isb1-mooncake-code-8k-lmcache:
+  tp2: {users: [2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+  tp4: {users: [2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+
+h200-fp8-qwen3-isb1-mooncake-chat-32k-lmcache:
+  tp2: {users: [1, 2, 4, 8, 16, 32], offload: ["on", "off"]}
+  tp4: {users: [1, 2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+
+h200-fp8-qwen3-isb1-mooncake-code-131k-lmcache:
+  tp4: {users: [1, 2, 4, 8], offload: ["on", "off"]}
+  tp8: {users: [1, 2, 4, 8, 16], offload: ["on", "off"]}
+
+b200-fp4-dsr1-isb1-mooncake-code-8k-lmcache:
+  tp4: {ep: 4, users: [4, 8, 16, 32, 64, 128, 256], offload: ["on", "off"]}
+  tp8: {ep: 8, users: [8, 16, 32, 64, 128, 256, 512], offload: ["on", "off"]}
+
+b200-fp4-dsr1-isb1-mooncake-chat-32k-lmcache:
+  tp4: {ep: 4, users: [1, 2, 4, 8, 16, 32, 64], offload: ["on", "off"]}
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16, 32, 64, 128], offload: ["on", "off"]}
+
+b200-fp4-dsr1-isb1-mooncake-code-131k-lmcache:
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16], offload: ["on", "off"]}
