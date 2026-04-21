@@ -160,6 +160,25 @@ python tools/isb1_to_kvcache_tester.py \
     --output-dir  traces_isb1/
 ```
 
+### Pre-converted sidecar (local-only mirror)
+
+For local Track A workflows, this repo can carry a pre-converted mirror at:
+
+- `datasets/isb1/converted/`
+
+Feed that mirror directly to `kv-cache-tester` with:
+
+```bash
+python trace_replay_tester.py --trace-directory datasets/isb1/converted/ --tokenizer Qwen/Qwen2.5-Coder-32B-Instruct --block-size 64
+```
+
+Mapping convention:
+
+- one trace file per ISB1 conversation/event
+- each trace filename is prefixed with the source bundle id
+
+`datasets/isb1/converted/` is **local-only** in this workflow and is not part of the upstream PR branch.
+
 ### Step 3 — replay against a running vLLM / SGLang server
 
 Using PR #993's own recipes (e.g. `benchmarks/single_node/multiturn_fp8_h200_trace_replay.sh`),
