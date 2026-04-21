@@ -1,3 +1,15 @@
+# ======================================================================
+# STATUS: SPECULATIVE / NON-BLOCKING
+# ----------------------------------------------------------------------
+# This file is NOT the canonical PR framing for fork PR #2. It depends on
+# an unmerged upstream patch that wires MOONCAKE_INPUT through
+# .github/workflows/benchmark-multiturn-tmpl.yml. Do NOT reference from
+# workflows until that path is approved upstream. See
+# datasets/isb1/RECIPE_MOONCAKE.md for the speculative patch set, or
+# https://github.com/OCWC22/InferenceX/pull/2 for the canonical
+# opt-in framing (corpus at datasets/isb1/mooncake/ consumed via existing
+# --custom-dataset-type mooncake_trace, zero harness patches required).
+# ======================================================================
 # ISB1 sweep cells for Cam's aiperf / mooncake_trace replay flow.
 # Schema mirrors .github/configs/multiturn-agentic-trace.yaml and
 # .github/configs/multiturn-agentic-trace-isb1.yaml.

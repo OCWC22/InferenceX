@@ -1,5 +1,7 @@
 # Operator recipe for `MOONCAKE_INPUT`
 
+> **Status: speculative / non-blocking ops-note. Not a PR ask.** This file documents *one possible* way upstream operators could wire the ISB-1 mooncake corpus into Cam's aiperf scripts. It is NOT the canonical PR framing. The canonical framing is the "opt-in second mooncake corpus" described in [fork PR #2](https://github.com/OCWC22/InferenceX/pull/2) — operators run `--custom-dataset-type mooncake_trace` against `datasets/isb1/mooncake/` with their existing `MOONCAKE_INPUT` plumbing; no upstream patches required.
+>
 > **These diffs target upstream harness files (`benchmarks/single_node/multiturn_fp8_*_lmcache_aiperf.sh`, `.github/workflows/benchmark-multiturn-tmpl.yml`, `.github/workflows/multiturn-sweep.yml`). Do NOT apply locally — they are for operators pulling this data into the upstream harness.**
 
 ## MOONCAKE_INPUT semantics
