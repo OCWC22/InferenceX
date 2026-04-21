@@ -248,6 +248,10 @@ Any failure of the above means the PR is not actually plumbed end-to-end for
 this bundle and should be reproduced against Cam's `trace_replay_tester.py`
 before being claimed as compatible.
 
+### Validate before publishing
+
+Before publishing or mirroring `datasets/isb1/converted/`, run `python3 tools/validate_kvcache_tester_trace.py datasets/isb1/converted/` to catch schema drift early: missing required keys, invalid `block_size`, and broken prefix-extending `hash_ids` that would otherwise fail inside Cam's replay sweep.
+
 ---
 
 ## HF publication
