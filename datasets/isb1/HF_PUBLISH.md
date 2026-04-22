@@ -33,7 +33,24 @@ Expected result:
 If validation fails, stop and fix the source corpus before publishing. Do not
 push a broken dataset mirror to HF.
 
-## 3. Token setup
+## 3. Python version
+
+`tools/publish_hf_dataset.py` imports `huggingface_hub >= 0.24`, which in turn
+requires Python 3.10+. On macOS the system `/usr/bin/python3` is 3.9 and does
+not ship `huggingface_hub`; do not use it.
+
+Use Python 3.13 explicitly:
+
+```bash
+/opt/homebrew/opt/python@3.13/bin/python3.13 -m pip install --user huggingface_hub
+/opt/homebrew/opt/python@3.13/bin/python3.13 tools/publish_hf_dataset.py --help
+```
+
+Or activate a virtualenv / pyenv shim that resolves to 3.10+ before running any
+of the commands below. If you see `ModuleNotFoundError: huggingface_hub`, you
+are on 3.9 — switch interpreters first.
+
+## 4. Token setup
 
 Authenticate with a token that has write access to the destination namespace:
 
@@ -48,7 +65,7 @@ export HF_TOKEN=hf_xxx
 huggingface-cli login --token "$HF_TOKEN"
 ```
 
-## 4. Dry-run the publish package locally
+## 5. Dry-run the publish package locally
 
 The uploader script stages the converted corpus plus the dataset card and
 prints the exact file list it would upload without making any remote changes.
@@ -71,7 +88,7 @@ python3 tools/publish_hf_dataset.py \
   --dry-run
 ```
 
-## 5. Publish for real
+## 6. Publish for real
 
 Once the dry-run output looks correct and HF auth is configured, publish with
 one of the exact commands below.
@@ -114,7 +131,7 @@ The script will:
 4. Upload the staged folder with `huggingface_hub`
 5. Verify the published snapshot with `snapshot_download` into `/tmp`
 
-## 6. Post-publish verification
+## 7. Post-publish verification
 
 ### Repository-level verification
 
@@ -146,7 +163,7 @@ TRACE_DIR=hf_ocwc22--isb1-cc-traces \
 bash experimental/multiturn/benchmarks/single_node/multiturn_fp8_h200_trace_replay.sh
 ```
 
-## 7. Consumer note for Cam
+## 8. Consumer note for Cam
 
 This is the zero-friction handoff:
 
@@ -158,7 +175,7 @@ bash experimental/multiturn/benchmarks/single_node/multiturn_fp8_h200_trace_repl
 No code change is required in Cam's harness. The only user action is publishing
 this dataset repo once with valid HF credentials.
 
-## 8. Versioning guidance
+## 9. Versioning guidance
 
 When new traces land:
 
