@@ -163,6 +163,18 @@ class MooncakeExporterTests(unittest.TestCase):
         blocks = [_text_block("before"), _code_block("SELECT 1", metadata_language="sql")]
         self.assertEqual(exporter._flatten_blocks(blocks), "before\n\n```sql\nSELECT 1\n```")
 
+    def test_non_text_blocks_without_text_use_token_count_placeholders(self) -> None:
+        blocks = [
+            {"type": "table", "token_count": 512},
+            {"type": "tool_output", "token_count": 128},
+            {"type": None, "token_count": 64},
+            {"type": "image"},
+        ]
+        self.assertEqual(
+            exporter._flatten_blocks(blocks),
+            "[TABLE token_count=512]\n\n[TOOL_OUTPUT token_count=128]\n\n[BLOCK token_count=64]",
+        )
+
     def test_tool_role_message_is_preserved_as_is(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

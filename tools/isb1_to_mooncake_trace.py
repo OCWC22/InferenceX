@@ -186,17 +186,32 @@ def _block_language(block: dict[str, Any]) -> str:
     return ""
 
 
+def _block_placeholder(block: dict[str, Any]) -> str | None:
+    token_count = block.get("token_count")
+    if isinstance(token_count, bool) or not isinstance(token_count, int):
+        return None
+
+    block_type = block.get("type")
+    label = block_type.upper() if isinstance(block_type, str) and block_type else "BLOCK"
+    return f"[{label} token_count={token_count}]"
+
+
 def _flatten_blocks(blocks: list[Any]) -> str:
     parts: list[str] = []
     for block in blocks:
         if not isinstance(block, dict):
             continue
-        block_type = str(block.get("type") or "text")
+        raw_block_type = block.get("type")
+        block_type = raw_block_type if isinstance(raw_block_type, str) and raw_block_type else None
         text = block.get("text")
         text_value = "" if text is None else str(text)
-        if block_type == "text":
+        if block_type in {None, "text"}:
             if text_value:
                 parts.append(text_value)
+            elif block_type is None:
+                placeholder = _block_placeholder(block)
+                if placeholder:
+                    parts.append(placeholder)
             continue
         if block_type == "code":
             language = _block_language(block)
@@ -205,6 +220,10 @@ def _flatten_blocks(blocks: list[Any]) -> str:
             continue
         if text_value:
             parts.append(text_value)
+            continue
+        placeholder = _block_placeholder(block)
+        if placeholder:
+            parts.append(placeholder)
     return "\n\n".join(parts)
 
 
