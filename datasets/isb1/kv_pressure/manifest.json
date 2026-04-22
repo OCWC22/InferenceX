@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "source_root": "datasets/isb1/converted",
+  "description": "Reference-only high-pressure subset for explicit KV offload sweeps. No new bundles are added; entries point at existing converted traces.",
+  "entries": [
+    {
+      "file": "preview/long_context_1m/inferencex_trace_replay__coding_qwen3.5_ulc2_1m_preview_v1/isb1_hb_depth_cache_ulc2_offload_cliff_01.json",
+      "cumulative_isl_tokens": 9754210,
+      "max_concurrent_session_isl_tokens": 1626197,
+      "rationale": "1M coding replay that stays far beyond Hopper/Blackwell single-session KV budgets; use it to force preemption and swap activity quickly."
+    },
+    {
+      "file": "preview/long_context_500k/inferencex_trace_replay__coding_qwen3.5_xlc2_500k_preview_v1/isb1_hb_depth_cache_xlc2_hot_cold_session_mix_01.json",
+      "cumulative_isl_tokens": 2688641,
+      "max_concurrent_session_isl_tokens": 672449,
+      "rationale": "500K hot/cold coding mix that surfaces partial-residency churn before the full 1M cliff, useful for intermediate cpu-offload settings."
+    },
+    {
+      "file": "extension_131k/code_131k1k_qwen3.5/isb1_hb_depth_cache_xlc1_text_shared_prefix_swarm_01.json",
+      "cumulative_isl_tokens": 1214768,
+      "max_concurrent_session_isl_tokens": 304114,
+      "rationale": "131K shared-prefix coding swarm that isolates reuse-vs-offload tradeoffs without needing the preview lanes."
+    }
+  ]
+}

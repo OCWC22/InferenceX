@@ -1,0 +1,59 @@
+# Opt-in KV-offload sweep for Cam's trace-replay lanes.
+# This file mirrors .github/configs/multiturn-agentic-trace-isb1.yaml but swaps
+# the coarse on/off axis for explicit cpu-offload budgets.
+#
+# offload values:
+#   0          — omit --cpu-offload-gb entirely (HBM-only baseline)
+#   20 / 40 / 80
+#              — pass --cpu-offload-gb N to the existing replay/aiperf wrappers
+#   noprefix   — omit --cpu-offload-gb and add --no-enable-prefix-caching
+#
+# This is additive and operator-only: pass this sweep file to Cam's existing
+# trace-replay or LMCache aiperf scripts. No harness edits required.
+
+h200-fp8-qwen3-isb1-code-8k:
+  tp2: {users: [2, 4, 8, 16, 32, 64, 128], offload: [0, 20, 40, 80, "noprefix"]}
+  tp4: {users: [2, 4, 8, 16, 32, 64, 128], offload: [0, 20, 40, 80, "noprefix"]}
+
+h200-fp8-qwen3-isb1-chat-32k:
+  tp2: {users: [1, 2, 4, 8, 16, 32], offload: [0, 20, 40, 80, "noprefix"]}
+  tp4: {users: [1, 2, 4, 8, 16, 32, 64], offload: [0, 20, 40, 80, "noprefix"]}
+
+h200-fp8-qwen3-isb1-code-131k:
+  tp4: {users: [1, 2, 4, 8], offload: [0, 20, 40, 80, "noprefix"]}
+  tp8: {users: [1, 2, 4, 8, 16], offload: [0, 20, 40, 80, "noprefix"]}
+
+b200-fp4-dsr1-isb1-code-8k:
+  tp4: {ep: 4, users: [4, 8, 16, 32, 64, 128, 256], offload: [0, 20, 40, 80, "noprefix"]}
+  tp8: {ep: 8, users: [8, 16, 32, 64, 128, 256, 512], offload: [0, 20, 40, 80, "noprefix"]}
+
+b200-fp4-dsr1-isb1-chat-32k:
+  tp4: {ep: 4, users: [1, 2, 4, 8, 16, 32, 64], offload: [0, 20, 40, 80, "noprefix"]}
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16, 32, 64, 128], offload: [0, 20, 40, 80, "noprefix"]}
+
+b200-fp4-dsr1-isb1-code-131k:
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16], offload: [0, 20, 40, 80, "noprefix"]}
+
+b200-fp4-dsr1-isb1-code-131k-hf:
+  tp8: {ep: 8, users: [1, 2, 4, 8, 16], offload: [0, 20, 40, 80, "noprefix"]}
+
+b200-fp4-qwen3-isb1-chat-500k-preview:
+  tp4: {users: [1, 2, 4], offload: [0, 20, 40, 80, "noprefix"]}
+  tp8: {users: [1, 2, 4, 8], offload: [0, 20, 40, 80, "noprefix"]}
+
+b200-fp4-qwen3-isb1-chat-1m-preview:
+  tp8: {users: [1, 2], offload: [0, 20, 40, 80, "noprefix"]}
+
+mi355x-fp8-qwen3-isb1-code-8k:
+  tp2: {users: [2, 4, 8, 16, 32, 64], offload: [0, 20, 40, 80, "noprefix"]}
+  tp4: {users: [2, 4, 8, 16, 32, 64, 128], offload: [0, 20, 40, 80, "noprefix"]}
+
+mi355x-fp8-qwen3-isb1-chat-32k:
+  tp4: {users: [1, 2, 4, 8, 16, 32], offload: [0, 20, 40, 80, "noprefix"]}
+
+h100-fp8-qwen3-isb1-code-8k-lmcache:
+  tp2: {users: [1, 2, 4, 8, 16, 32], offload: [0, 20, 40, 80, "noprefix"]}
+  tp4: {users: [1, 2, 4, 8, 16, 32, 64], offload: [0, 20, 40, 80, "noprefix"]}
+
+h200-fp8-qwen3-isb1-debug:
+  tp2: {users: [2], offload: [0, 20, 40, 80, "noprefix"]}
