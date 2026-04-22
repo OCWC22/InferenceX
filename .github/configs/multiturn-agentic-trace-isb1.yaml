@@ -1,0 +1,8 @@
+# Operator-only ISB1 reference cell for manual GMI runs.
+# This branch starts from origin/main, which does not carry the shipped ISB1
+# replay matrix from sibling commit 38fd91a7. Keep this file out of CI dispatch.
+# tp4 maps to the 8k/32k cells in runners/GMI_QUICKSTART.md; tp8 maps to 131k.
+
+h200-fp8-qwen3_5-isb1-gmi-reference:
+  tp4: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
+  tp8: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
