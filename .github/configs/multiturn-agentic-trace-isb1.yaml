@@ -1,8 +1,20 @@
-# Operator-only ISB1 reference cell for manual GMI runs.
+# Operator-only ISB1 reference cells for manual GMI runs.
 # This branch starts from origin/main, which does not carry the shipped ISB1
 # replay matrix from sibling commit 38fd91a7. Keep this file out of CI dispatch.
-# tp4 maps to the 8k/32k cells in runners/GMI_QUICKSTART.md; tp8 maps to 131k.
+# NOT CI-dispatched: these rows only mirror the manual GMI quickstarts.
+# h200 tp4 maps to the 8k/32k cells in runners/GMI_QUICKSTART.md; tp8 maps to 131k.
+# gb200 tp2/tp4 cover the 8k/32k cells in runners/GMI_QUICKSTART_GB200.md; tp8 is the wide 131k option.
+# h100 tp4 maps to the 8k/32k cells in runners/GMI_QUICKSTART_H100.md; tp8 maps to 131k.
 
 h200-fp8-qwen3_5-isb1-gmi-reference:
+  tp4: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
+  tp8: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
+
+gb200-fp4-dsr1-isb1-gmi-reference:
+  tp2: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
+  tp4: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
+  tp8: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
+
+h100-fp8-qwen3-isb1-gmi-reference:
   tp4: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
   tp8: {users: [1, 2, 4, 8, 16], offload: ["on", "off", "noprefix"]}
