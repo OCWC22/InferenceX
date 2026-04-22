@@ -4,7 +4,9 @@
 Stdlib-only validator for the compact trace schema consumed by
 `trace_replay_tester.py` / `normalize_trace()` in Cam's kv-cache-tester.
 Supports validating a single JSON file or recursively walking a directory of
-trace files.
+trace files. When ``--pressure-manifest`` is provided, the validator also
+cross-checks that the curated KV-pressure subset points at real trace files and
+that its claimed ISL numbers match the on-disk traces exactly.
 """
 
 from __future__ import annotations
@@ -193,13 +195,11 @@ def _validate_request(
         else:
             _add_issue(errors, f"{prefix}.hash_ids must not mix flat and nested entries", max_issues)
 
-    optional_string_fields = ("model", "stop")
-    for field_name in optional_string_fields:
+    for field_name in ("model", "stop"):
         if field_name in req and not isinstance(req[field_name], str):
             _add_issue(errors, f"{prefix}.{field_name} must be str", max_issues)
 
-    optional_list_fields = ("input_types", "output_types")
-    for field_name in optional_list_fields:
+    for field_name in ("input_types", "output_types"):
         if field_name in req:
             value = req[field_name]
             if not isinstance(value, list):
@@ -209,8 +209,7 @@ def _validate_request(
                 if not isinstance(item, str):
                     _add_issue(errors, f"{prefix}.{field_name}[{idx}] must be str", max_issues)
 
-    optional_number_fields = ("api_time", "think_time")
-    for field_name in optional_number_fields:
+    for field_name in ("api_time", "think_time"):
         if field_name in req:
             value = req[field_name]
             if not _is_number(value):
@@ -275,6 +274,99 @@ def validate_trace(trace: Any, *, max_issues: int) -> tuple[list[str], list[str]
     return errors, warnings
 
 
+def compute_trace_isl_stats(trace: dict[str, Any]) -> dict[str, int]:
+    requests = [
+        req
+        for req in trace.get("requests", [])
+        if isinstance(req, dict) and req.get("type") != "subagent"
+    ]
+    in_tokens = [int(req.get("in", 0)) for req in requests if _is_int(req.get("in"))]
+    return {
+        "cumulative_isl_tokens": sum(in_tokens),
+        "max_concurrent_session_isl_tokens": max(in_tokens) if in_tokens else 0,
+    }
+
+
+def validate_pressure_manifest(
+    manifest: Any,
+    *,
+    trace_root: Path,
+    max_issues: int,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not isinstance(manifest, dict):
+        return [f"pressure manifest must be a JSON object, got {type(manifest).__name__}"], warnings
+
+    entries = manifest.get("entries")
+    if not isinstance(entries, list) or not entries:
+        _add_issue(errors, "entries must be a non-empty list", max_issues)
+        return errors, warnings
+
+    resolved_root = trace_root.resolve()
+    seen_files: set[str] = set()
+
+    for idx, entry in enumerate(entries):
+        prefix = f"entries[{idx}]"
+        if not isinstance(entry, dict):
+            _add_issue(errors, f"{prefix} must be object, got {type(entry).__name__}", max_issues)
+            continue
+
+        file_value = entry.get("file")
+        rationale = entry.get("rationale")
+        cumulative = entry.get("cumulative_isl_tokens")
+        maximum = entry.get("max_concurrent_session_isl_tokens")
+
+        if not isinstance(file_value, str) or not file_value:
+            _add_issue(errors, f"{prefix}.file must be non-empty str", max_issues)
+            continue
+        if file_value in seen_files:
+            _add_issue(warnings, f"{prefix}.file duplicates an earlier entry: {file_value}", max_issues)
+        seen_files.add(file_value)
+
+        if not isinstance(rationale, str) or not rationale.strip():
+            _add_issue(errors, f"{prefix}.rationale must be non-empty str", max_issues)
+        if not _is_int(cumulative) or cumulative < 0:
+            _add_issue(errors, f"{prefix}.cumulative_isl_tokens must be int >= 0", max_issues)
+        if not _is_int(maximum) or maximum < 0:
+            _add_issue(errors, f"{prefix}.max_concurrent_session_isl_tokens must be int >= 0", max_issues)
+        if len(errors) >= max_issues:
+            continue
+
+        candidate = (trace_root / file_value).resolve()
+        try:
+            candidate.relative_to(resolved_root)
+        except ValueError:
+            _add_issue(errors, f"{prefix}.file escapes trace root: {file_value}", max_issues)
+            continue
+        if not candidate.is_file():
+            _add_issue(errors, f"{prefix}.file does not exist under {trace_root}: {file_value}", max_issues)
+            continue
+
+        try:
+            trace = json.loads(candidate.read_text())
+        except Exception as exc:  # pragma: no cover - defensive path
+            _add_issue(errors, f"{prefix}.file is not valid JSON: {exc}", max_issues)
+            continue
+
+        actual = compute_trace_isl_stats(trace)
+        if cumulative != actual["cumulative_isl_tokens"]:
+            _add_issue(
+                errors,
+                f"{prefix}.cumulative_isl_tokens = {cumulative}, expected {actual['cumulative_isl_tokens']} from {file_value}",
+                max_issues,
+            )
+        if maximum != actual["max_concurrent_session_isl_tokens"]:
+            _add_issue(
+                errors,
+                f"{prefix}.max_concurrent_session_isl_tokens = {maximum}, expected {actual['max_concurrent_session_isl_tokens']} from {file_value}",
+                max_issues,
+            )
+
+    return errors, warnings
+
+
 def iter_trace_files(path: Path) -> list[Path]:
     if path.is_file():
         return [path]
@@ -307,6 +399,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=5,
         help="maximum errors reported per file (default: 5)",
     )
+    parser.add_argument(
+        "--pressure-manifest",
+        type=Path,
+        default=None,
+        help="optional manifest.json describing curated high-pressure trace entries to cross-check",
+    )
     return parser.parse_args(argv)
 
 
@@ -329,6 +427,7 @@ def main(argv: list[str] | None = None) -> int:
 
     valid_count = 0
     failed_count = 0
+    manifest_clean = False
 
     for file_path in files:
         try:
@@ -356,8 +455,43 @@ def main(argv: list[str] | None = None) -> int:
                 for warning in warnings[: args.max_errors_per_file]:
                     print(f"    {warning}")
 
+    if args.pressure_manifest is not None:
+        try:
+            manifest_payload = json.loads(args.pressure_manifest.read_text())
+        except FileNotFoundError:
+            print(f"Path not found: {args.pressure_manifest}", file=sys.stderr)
+            return 2
+        except Exception as exc:
+            print(f"invalid pressure manifest JSON: {exc}", file=sys.stderr)
+            return 2
+
+        trace_root = path if path.is_dir() else path.parent
+        manifest_errors, manifest_warnings = validate_pressure_manifest(
+            manifest_payload,
+            trace_root=trace_root,
+            max_issues=args.max_errors_per_file,
+        )
+        effective_manifest_errors = list(manifest_errors)
+        if args.strict:
+            effective_manifest_errors.extend(manifest_warnings)
+        if effective_manifest_errors:
+            failed_count += 1
+            if not args.quiet:
+                print(f"{CROSS} {args.pressure_manifest}")
+                for issue in effective_manifest_errors[: args.max_errors_per_file]:
+                    print(f"    {issue}")
+        else:
+            manifest_clean = True
+            if manifest_warnings and not args.quiet:
+                print(f"{WARN} {args.pressure_manifest}")
+                for warning in manifest_warnings[: args.max_errors_per_file]:
+                    print(f"    {warning}")
+
     if failed_count == 0:
-        print(f"{CHECK} {valid_count} files valid | 0 failed")
+        if manifest_clean:
+            print(f"{CHECK} {valid_count} files valid | pressure manifest clean | 0 failed")
+        else:
+            print(f"{CHECK} {valid_count} files valid | 0 failed")
         return 0
 
     plural = "files" if failed_count != 1 else "file"
