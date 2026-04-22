@@ -1,0 +1,260 @@
+{
+  "schema_version": "1.1.0",
+  "flattener_version": "1.1.0",
+  "generated_at": "2026-04-22T04:39:40Z",
+  "generator": "tools/isb1_to_mooncake_trace.py + one-shot inline walker",
+  "dataset_type": "mooncake_trace",
+  "total_traces": 17,
+  "total_requests": 1142,
+  "total_sessions": 22,
+  "total_jsonl_bytes": 13988708,
+  "traces": [
+    {
+      "relative_path": "core/chat_8k1k/isb1_core_chat_8k1k.jsonl",
+      "bundle_id": "isb1_core_chat_8k1k",
+      "source_export": "datasets/isb1/exports/core/chat_8k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 228,
+      "session_count": 2,
+      "scale_band": "8k",
+      "workload_family": "chat",
+      "jsonl_bytes": 1000005
+    },
+    {
+      "relative_path": "core/chat_8k1k_qwen3.5/isb1_core_chat_8k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_core_chat_8k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/core/chat_8k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 12,
+      "session_count": 1,
+      "scale_band": "8k",
+      "workload_family": "chat",
+      "jsonl_bytes": 27990
+    },
+    {
+      "relative_path": "core/code_8k1k/isb1_core_code_8k1k.jsonl",
+      "bundle_id": "isb1_core_code_8k1k",
+      "source_export": "datasets/isb1/exports/core/code_8k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 180,
+      "session_count": 3,
+      "scale_band": "8k",
+      "workload_family": "code",
+      "jsonl_bytes": 500685
+    },
+    {
+      "relative_path": "core/code_8k1k_qwen3.5/isb1_core_code_8k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_core_code_8k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/core/code_8k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 12,
+      "session_count": 1,
+      "scale_band": "8k",
+      "workload_family": "code",
+      "jsonl_bytes": 30024
+    },
+    {
+      "relative_path": "extension_131k/chat_131k1k/isb1_extension_131k_chat_131k1k.jsonl",
+      "bundle_id": "isb1_extension_131k_chat_131k1k",
+      "source_export": "datasets/isb1/exports/extension_131k/chat_131k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 108,
+      "session_count": 1,
+      "scale_band": "131k",
+      "workload_family": "chat",
+      "jsonl_bytes": 289119
+    },
+    {
+      "relative_path": "extension_131k/chat_131k1k_dsr1/isb1_extension_131k_chat_131k1k_dsr1.jsonl",
+      "bundle_id": "isb1_extension_131k_chat_131k1k_dsr1",
+      "source_export": "datasets/isb1/exports/extension_131k/chat_131k1k_dsr1.json",
+      "models": [
+        "deepseek_r1_0528"
+      ],
+      "num_requests": 27,
+      "session_count": 1,
+      "scale_band": "131k",
+      "workload_family": "chat",
+      "jsonl_bytes": 72408
+    },
+    {
+      "relative_path": "extension_131k/chat_131k1k_qwen3.5/isb1_extension_131k_chat_131k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_extension_131k_chat_131k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/extension_131k/chat_131k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 27,
+      "session_count": 1,
+      "scale_band": "131k",
+      "workload_family": "chat",
+      "jsonl_bytes": 72435
+    },
+    {
+      "relative_path": "extension_131k/code_131k1k/isb1_extension_131k_vllm_code_131k1k.jsonl",
+      "bundle_id": "isb1_extension_131k_vllm_code_131k1k",
+      "source_export": "datasets/isb1/exports/extension_131k/code_131k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5",
+        "kimi_k2_5",
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 4,
+      "session_count": 1,
+      "scale_band": "131k",
+      "workload_family": "code",
+      "jsonl_bytes": 4896708
+    },
+    {
+      "relative_path": "extension_131k/code_131k1k_qwen3.5/isb1_extension_131k_vllm_code_131k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_extension_131k_vllm_code_131k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/extension_131k/code_131k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 4,
+      "session_count": 1,
+      "scale_band": "131k",
+      "workload_family": "code",
+      "jsonl_bytes": 4896728
+    },
+    {
+      "relative_path": "extension_32k/chat_32k1k/isb1_extension_32k_chat_32k1k.jsonl",
+      "bundle_id": "isb1_extension_32k_chat_32k1k",
+      "source_export": "datasets/isb1/exports/extension_32k/chat_32k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 108,
+      "session_count": 1,
+      "scale_band": "32k",
+      "workload_family": "chat",
+      "jsonl_bytes": 480063
+    },
+    {
+      "relative_path": "extension_32k/chat_32k1k_qwen3.5/isb1_extension_32k_chat_32k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_extension_32k_chat_32k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/extension_32k/chat_32k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 27,
+      "session_count": 1,
+      "scale_band": "32k",
+      "workload_family": "chat",
+      "jsonl_bytes": 120171
+    },
+    {
+      "relative_path": "extension_32k/code_32k1k/isb1_extension_32k_code_32k1k.jsonl",
+      "bundle_id": "isb1_extension_32k_code_32k1k",
+      "source_export": "datasets/isb1/exports/extension_32k/code_32k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 108,
+      "session_count": 2,
+      "scale_band": "32k",
+      "workload_family": "code",
+      "jsonl_bytes": 252231
+    },
+    {
+      "relative_path": "extension_32k/code_32k1k_qwen3.5/isb1_extension_32k_code_32k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_extension_32k_code_32k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/extension_32k/code_32k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 27,
+      "session_count": 2,
+      "scale_band": "32k",
+      "workload_family": "code",
+      "jsonl_bytes": 63213
+    },
+    {
+      "relative_path": "extension_64k/chat_64k1k/isb1_extension_64k_chat_64k1k.jsonl",
+      "bundle_id": "isb1_extension_64k_chat_64k1k",
+      "source_export": "datasets/isb1/exports/extension_64k/chat_64k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 156,
+      "session_count": 1,
+      "scale_band": "64k",
+      "workload_family": "chat",
+      "jsonl_bytes": 884355
+    },
+    {
+      "relative_path": "extension_64k/chat_64k1k_qwen3.5/isb1_extension_64k_chat_64k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_extension_64k_chat_64k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/extension_64k/chat_64k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 39,
+      "session_count": 1,
+      "scale_band": "64k",
+      "workload_family": "chat",
+      "jsonl_bytes": 221313
+    },
+    {
+      "relative_path": "extension_64k/code_64k1k/isb1_extension_64k_code_64k1k.jsonl",
+      "bundle_id": "isb1_extension_64k_code_64k1k",
+      "source_export": "datasets/isb1/exports/extension_64k/code_64k1k.json",
+      "models": [
+        "deepseek_r1_0528",
+        "glm_5",
+        "gpt_oss_120b",
+        "minimax_m2_5"
+      ],
+      "num_requests": 60,
+      "session_count": 1,
+      "scale_band": "64k",
+      "workload_family": "code",
+      "jsonl_bytes": 144939
+    },
+    {
+      "relative_path": "extension_64k/code_64k1k_qwen3.5/isb1_extension_64k_code_64k1k_qwen3_5.jsonl",
+      "bundle_id": "isb1_extension_64k_code_64k1k_qwen3_5",
+      "source_export": "datasets/isb1/exports/extension_64k/code_64k1k_qwen3.5.json",
+      "models": [
+        "qwen3_5_397b_a17b"
+      ],
+      "num_requests": 15,
+      "session_count": 1,
+      "scale_band": "64k",
+      "workload_family": "code",
+      "jsonl_bytes": 36321
+    }
+  ]
+}
