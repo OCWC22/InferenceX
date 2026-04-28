@@ -5,11 +5,11 @@ set -x
 # Agentic trace replay benchmark for DSR1 FP4 on MI355X using SGLang.
 #
 # Required env vars:
-#   MODEL, TP, USERS, RESULT_DIR
+#   MODEL, TP, CONC, RESULT_DIR
 
 source "$(dirname "$0")/../../benchmark_lib.sh"
 
-check_env_vars MODEL TP USERS RESULT_DIR
+check_env_vars MODEL TP CONC RESULT_DIR
 
 PORT=${PORT:-8888}
 DURATION=${DURATION:-1800}
@@ -46,8 +46,8 @@ python3 -m sglang.launch_server \
 --chunked-prefill-size=16384 \
 --mem-fraction-static=0.8 \
 --num-continuous-decode-steps=4 \
---cuda-graph-max-bs=$USERS \
---max-running-requests=$USERS \
+--cuda-graph-max-bs=$CONC \
+--max-running-requests=$CONC \
 --attention-backend aiter \
 --kv-cache-dtype fp8_e4m3 \
 --enable-metrics > "$SERVER_LOG" 2>&1 &

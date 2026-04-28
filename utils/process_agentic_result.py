@@ -6,9 +6,9 @@ output directory and produces an agg_*.json file matching the naming convention
 of fixed-seq-len results.
 
 Expected env vars:
-    RESULT_FILENAME - base name for output file (e.g., dsr1_tp4_users8_offloadcpu_...)
+    RESULT_FILENAME - base name for output file (e.g., dsr1_tp4_conc8_offloadcpu_...)
     MODEL, MODEL_PREFIX, FRAMEWORK, PRECISION, TP, EP_SIZE, DP_ATTENTION
-    USERS, OFFLOADING, RUNNER_TYPE
+    CONC, OFFLOADING, RUNNER_TYPE
 """
 
 import csv
@@ -279,13 +279,10 @@ def main():
         ep = max(prefill_ep, decode_ep)
         dp_attention = "true" if env_bool('PREFILL_DP_ATTN') or env_bool('DECODE_DP_ATTN') else "false"
 
-    users = int(os.environ.get('USERS', '0'))
+    conc = int(os.environ.get('CONC', '0'))
     agg = {
         "hw": os.environ.get('RUNNER_TYPE', ''),
-        # conc mirrors fixed-seq-len's field; users is the historical agentic
-        # name. Keep both so consumers can use either.
-        "conc": users,
-        "users": users,
+        "conc": conc,
         "image": os.environ.get('IMAGE', ''),
         "model": os.environ.get('MODEL', ''),
         "infmax_model_prefix": os.environ.get('MODEL_PREFIX', ''),

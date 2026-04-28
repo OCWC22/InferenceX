@@ -141,7 +141,6 @@ env:
   SCENARIO_TYPE: ${{ inputs.scenario-type }}
   SCENARIO_SUBDIR: ${{ inputs.scenario-type == 'agentic-coding' && 'agentic/' || '' }}
   CONC: ${{ inputs.conc }}
-  USERS: ${{ inputs.conc }}
   DURATION: ${{ inputs.duration }}
   OFFLOADING: ${{ inputs.offloading }}
   TOTAL_CPU_DRAM_GB: ${{ inputs.total-cpu-dram-gb }}

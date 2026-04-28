@@ -423,7 +423,7 @@ def generate_full_sweep(args, all_config_data, runner_data):
 
                 runners_for_entry = runner_nodes_to_use if runner_nodes_to_use else [runner]
 
-                for users in conc_values:
+                for conc in conc_values:
                     for runner_value in runners_for_entry:
                         if is_multinode:
                             entry = {
@@ -436,12 +436,11 @@ def generate_full_sweep(args, all_config_data, runner_data):
                                 Fields.SPEC_DECODING.value: spec_decoding,
                                 Fields.PREFILL.value: prefill,
                                 Fields.DECODE.value: decode,
-                                Fields.USERS.value: users,
-                                Fields.CONC.value: [users],
+                                Fields.CONC.value: conc,
                                 Fields.DURATION.value: duration,
                                 Fields.EXP_NAME.value: (
                                     f"{model_code}_p{prefill[Fields.NUM_WORKER.value]}x{prefill[Fields.TP.value]}"
-                                    f"_d{decode[Fields.NUM_WORKER.value]}x{decode[Fields.TP.value]}_users{users}"
+                                    f"_d{decode[Fields.NUM_WORKER.value]}x{decode[Fields.TP.value]}_conc{conc}"
                                 ),
                                 Fields.DISAGG.value: disagg,
                                 Fields.SCENARIO_TYPE.value: "agentic-coding",
@@ -457,10 +456,10 @@ def generate_full_sweep(args, all_config_data, runner_data):
                                 Fields.TP.value: tp,
                                 Fields.EP.value: ep if ep is not None else 1,
                                 Fields.DP_ATTN.value: dp_attn if dp_attn is not None else False,
-                                Fields.USERS.value: users,
+                                Fields.CONC.value: conc,
                                 Fields.OFFLOADING.value: offloading,
                                 Fields.DURATION.value: duration,
-                                Fields.EXP_NAME.value: f"{model_code}_tp{tp}_users{users}_offload{offloading}",
+                                Fields.EXP_NAME.value: f"{model_code}_tp{tp}_conc{conc}_offload{offloading}",
                                 Fields.SCENARIO_TYPE.value: "agentic-coding",
                             }
 
@@ -807,7 +806,7 @@ def generate_test_config_sweep(args, all_config_data):
                 if not conc_values:
                     continue
 
-                for users in conc_values:
+                for conc in conc_values:
                     if is_multinode:
                         entry = {
                             Fields.IMAGE.value: image,
@@ -819,12 +818,11 @@ def generate_test_config_sweep(args, all_config_data):
                             Fields.SPEC_DECODING.value: spec_decoding,
                             Fields.PREFILL.value: prefill,
                             Fields.DECODE.value: decode,
-                            Fields.USERS.value: users,
-                            Fields.CONC.value: [users],
+                            Fields.CONC.value: conc,
                             Fields.DURATION.value: duration,
                             Fields.EXP_NAME.value: (
                                 f"{model_code}_p{prefill[Fields.NUM_WORKER.value]}x{prefill[Fields.TP.value]}"
-                                f"_d{decode[Fields.NUM_WORKER.value]}x{decode[Fields.TP.value]}_users{users}"
+                                f"_d{decode[Fields.NUM_WORKER.value]}x{decode[Fields.TP.value]}_conc{conc}"
                             ),
                             Fields.DISAGG.value: disagg,
                             Fields.SCENARIO_TYPE.value: "agentic-coding",
@@ -840,10 +838,10 @@ def generate_test_config_sweep(args, all_config_data):
                             Fields.TP.value: tp,
                             Fields.EP.value: ep if ep is not None else 1,
                             Fields.DP_ATTN.value: dp_attn if dp_attn is not None else False,
-                            Fields.USERS.value: users,
+                            Fields.CONC.value: conc,
                             Fields.OFFLOADING.value: offloading,
                             Fields.DURATION.value: duration,
-                            Fields.EXP_NAME.value: f"{model_code}_tp{tp}_users{users}_offload{offloading}",
+                            Fields.EXP_NAME.value: f"{model_code}_tp{tp}_conc{conc}_offload{offloading}",
                             Fields.SCENARIO_TYPE.value: "agentic-coding",
                         }
                     matrix_values.append(validate_agentic_matrix_entry(entry))

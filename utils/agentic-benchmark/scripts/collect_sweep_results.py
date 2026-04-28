@@ -160,24 +160,24 @@ def load_experiment(exp_dir: Path) -> dict | None:
 
     # Parse experiment name from directory.
     # Supports formats:
-    #   multiturn_tp{N}_users{M}_offload{mode}
-    #   tp{N}_users{M}_offload{mode}
-    #   agentic_{model}_tp{N}_users{M}_offload{mode}_{extra...}
+    #   multiturn_tp{N}_conc{M}_offload{mode}
+    #   tp{N}_conc{M}_offload{mode}
+    #   agentic_{model}_tp{N}_conc{M}_offload{mode}_{extra...}
     import re
     name = exp_dir.name
-    match = re.search(r'tp(\d+)_users(\d+)_offload(on|off)', name)
+    match = re.search(r'tp(\d+)_conc(\d+)_offload(on|off)', name)
     if not match:
         print(f"Warning: cannot parse experiment name '{exp_dir.name}', skipping")
         return None
 
     tp = int(match.group(1))
-    users = int(match.group(2))
+    conc = int(match.group(2))
     offload = match.group(3)
 
     result = {
         "exp_name": name,
         "tp": tp,
-        "users": users,
+        "conc": conc,
         "offload": offload,
         "status": status,
     }

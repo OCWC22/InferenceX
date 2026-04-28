@@ -59,7 +59,6 @@ class Fields(Enum):
     EXP_NAME = 'exp-name'
     DISAGG = 'disagg'
     SCENARIO_TYPE = 'scenario-type'
-    USERS = 'users'
 
     # Eval
     RUN_EVAL = 'run-eval'
@@ -156,7 +155,7 @@ class SingleNodeAgenticMatrixEntry(BaseModel):
     tp: int
     ep: int
     dp_attn: bool = Field(alias=Fields.DP_ATTN.value)
-    users: int
+    conc: int
     offloading: Literal["none", "cpu", "ssd"] = Field(alias=Fields.OFFLOADING.value)
     duration: int = Field(default=1800, alias=Fields.DURATION.value)
     exp_name: str = Field(alias=Fields.EXP_NAME.value)
@@ -178,8 +177,7 @@ class MultiNodeAgenticMatrixEntry(BaseModel):
     runner: str
     prefill: WorkerConfig
     decode: WorkerConfig
-    users: int
-    conc: List[int]
+    conc: int
     duration: int = Field(default=1800, alias=Fields.DURATION.value)
     exp_name: str = Field(alias=Fields.EXP_NAME.value)
     disagg: bool

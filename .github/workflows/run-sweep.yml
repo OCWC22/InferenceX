@@ -214,7 +214,7 @@ jobs:
             tp: ${{ matrix.config.tp }}
             ep: ${{ matrix.config.ep }}
             dp-attn: ${{ matrix.config.dp-attn }}
-            conc: ${{ matrix.config.users }}
+            conc: ${{ matrix.config.conc }}
             offloading: ${{ matrix.config.offloading }}
             duration: ${{ matrix.config.duration }}
             isl: '0'
@@ -246,7 +246,7 @@ jobs:
             model-prefix: ${{ matrix.config.model-prefix }}
             framework: ${{ matrix.config.framework }}
             precision: ${{ matrix.config.precision }}
-            conc-list: ${{ toJson(matrix.config.conc) }}
+            conc-list: '[${{ matrix.config.conc }}]'
             spec-decoding: ${{ matrix.config.spec-decoding }}
             disagg: ${{ matrix.config.disagg }}
             prefill-num-worker: ${{ matrix.config.prefill.num-worker }}
@@ -259,7 +259,7 @@ jobs:
             decode-ep: ${{ matrix.config.decode.ep }}
             decode-dp-attn: ${{ matrix.config.decode.dp-attn }}
             decode-additional-settings: ${{ toJson(matrix.config.decode.additional-settings) }}
-            users: ${{ matrix.config.users }}
+            conc: ${{ matrix.config.conc }}
             duration: ${{ matrix.config.duration }}
             run-eval: false
             scenario-type: agentic-coding
