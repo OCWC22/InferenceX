@@ -186,6 +186,25 @@ SERVER_PID=$!
 
 wait_for_server_ready --port "$PORT" --server-log "$SERVER_LOG" --server-pid "$SERVER_PID"
 
+if [ "${AGENTIC_MODE:-0}" = "1" ]; then
+    RESULT_DIR="${RESULT_DIR:-$PWD/results}"
+    mkdir -p "$RESULT_DIR"
+    cp "$SERVER_LOG" "$RESULT_DIR/server.log" 2>/dev/null || true
+    resolve_trace_source
+    install_agentic_deps
+    build_replay_cmd "$RESULT_DIR"
+    echo "$REPLAY_CMD" > "$RESULT_DIR/benchmark_command.txt"
+    set +e
+    $REPLAY_CMD 2>&1 | tee "$RESULT_DIR/benchmark.log"
+    REPLAY_RC=${PIPESTATUS[0]}
+    set -e
+    write_agentic_result_json "$RESULT_DIR"
+    python3 "$AGENTIC_DIR/scripts/analyze_benchmark_distributions.py" \
+        "$RESULT_DIR/trace_replay" -o "$RESULT_DIR" 2>&1 || true
+    stop_gpu_monitor
+    exit "$REPLAY_RC"
+fi
+
 pip install -q datasets pandas
 
 run_benchmark_serving \

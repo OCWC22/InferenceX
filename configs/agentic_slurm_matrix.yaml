@@ -1,0 +1,67 @@
+defaults:
+  partition_env: GMI_SLURM_PARTITION
+  account_env: GMI_SLURM_ACCOUNT
+  results_root_env: GMI_RESULTS_ROOT
+  container_image_env: GMI_CONTAINER_IMAGE
+  model_path_env: GMI_MODEL_PATH
+  time_limit: "04:00:00"
+  cpus_per_task: 64
+  gpus_per_node: 8
+  trace_source: "semianalysisai/cc-traces-weka-042026"
+  duration_seconds: 1800
+  arrival_modes: ["closed_loop"]
+  cache_modes: ["engine_prefix_cache"]
+  tenant_modes: ["single_tenant"]
+  context_buckets: ["8k", "32k", "64k", "128k"]
+  concurrency: [1, 2, 4, 8, 16, 32, 64]
+
+hardware:
+  b200:
+    enabled: true
+    runner_script: "runners/launch_b200-nb.sh"
+    runner_name: "b200-gmi-agentic"
+    slurm_nodes: 1
+    model_prefix: "dsv4"
+    precision: "fp4"
+    framework: "sglang"
+    topology: "single_node"
+    tp: 8
+    ep: 8
+    dp_attention: true
+    script_expected: "benchmarks/single_node/agentic/dsv4_fp4_b200_sglang.sh"
+
+  b300:
+    enabled: true
+    runner_script: "runners/launch_b300-nv.sh"
+    runner_name: "b300-gmi-agentic"
+    slurm_nodes: 1
+    model_prefix: "dsv4"
+    precision: "fp4"
+    framework: "sglang"
+    topology: "single_node"
+    tp: 8
+    ep: 8
+    dp_attention: true
+    script_expected: "benchmarks/single_node/agentic/dsv4_fp4_b300_sglang.sh"
+
+  gb200:
+    enabled: true
+    runner_script: "runners/launch_gb200-nv.sh"
+    runner_name: "gb200-gmi-agentic"
+    slurm_nodes: 5
+    model_prefix: "dsv4"
+    precision: "fp4"
+    framework: "dynamo-vllm"
+    topology: "multi_node_disagg"
+    prefill:
+      num_worker: 1
+      tp: 8
+      ep: 8
+      dp_attention: true
+    decode:
+      num_worker: 1
+      tp: 8
+      ep: 1
+      dp_attention: false
+    config_file: "recipes/vllm/deepseek-v4/8k1k/disagg-gb200-low-latency.yaml"
+
