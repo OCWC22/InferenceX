@@ -124,8 +124,8 @@ The current use case is:
 | DeepSeek-V4 B200/B300 SGLang fixed-seq | Exists | Fixed 1k/8k surfaces, not agentic trace replay. |
 | DeepSeek-V4 B200/B300 vLLM fixed-seq/MTP | Exists | Fixed-seq path with DSV4 chat encoding. |
 | DeepSeek-V4 GB200 vLLM srt-slurm recipes | Exists | Recipe set for 8k1k, not agentic trace replay. |
-| DeepSeek-V4 B200/B300 SGLang agentic trace replay | Wired, needs live validation | Added DSV4 single-node agentic wrappers and conservative `agentic-coding` config rows. |
-| DeepSeek-V4 GB200 agentic trace replay | Dry-run harness only | Portable Slurm matrix can render GB200 agentic jobs, but live srt-slurm recipe behavior is still unproven. |
+| DeepSeek-V4 GB200 agentic trace replay | Missing | No `agentic-coding` config or DSV4-specific agentic launcher found. |
+| B300 agentic trace replay | Mostly missing | B300 has fixed-seq DSR1/DSV4 surfaces, not a clear agentic path. |
 | LMCache/TensorMesh agentic comparison | Missing | No direct LMCache/TensorMesh metrics integration in InferenceX agentic path. |
 
 ## What A GMI/Neocloud Platform Engineer Actually Cares About
@@ -161,11 +161,11 @@ Legend:
 |---|---:|---|---|
 | Agentic scenario flag and config schema | Yes | `agentic-coding` in config docs and validation. | Keep. |
 | WEKA trace replay source | Yes | `semianalysisai/cc-traces-weka-042026` in `resolve_trace_source`. | Make dataset configurable; keep WEKA as default/example. |
-| Single-node trace replay execution | Yes | `benchmarks/single_node/agentic/*.sh`. | Run live DSV4 B200/B300 validation. |
+| Single-node trace replay execution | Yes | `benchmarks/single_node/agentic/*.sh`. | Add DSV4 B200/B300 launchers. |
 | Multi-node trace replay execution | Partial | `benchmarks/multi_node/agentic_srt.sh`; special srt-slurm branch. | First-class srt-slurm support, no special private branch dependency. |
-| DeepSeek-V4 B200 agentic | Partial | Config + launcher are wired; no live GPU artifact yet. | Run on B200 Slurm and attach artifacts. |
-| DeepSeek-V4 B300 agentic | Partial | Config + launcher are wired; no live GPU artifact yet. | Run on B300 Slurm and attach artifacts. |
-| DeepSeek-V4 GB200 agentic | Partial | Portable matrix renders GB200 jobs; live srt-slurm behavior remains unproven. | Add/validate GB200 agentic srt-slurm recipe on real hardware. |
+| DeepSeek-V4 B200 agentic | No | DSV4 B200 configs are fixed-seq, not `agentic-coding`. | Add config + launcher + validated run. |
+| DeepSeek-V4 B300 agentic | No | B300 has DSV4 fixed-seq scripts/recipes, not agentic. | Add config + launcher + validated run. |
+| DeepSeek-V4 GB200 agentic | No | GB200 DSV4 recipes exist, but no agentic scenario. | Add srt-slurm agentic recipe and config. |
 | B200/B300/GB200 apples-to-apples matrix | No | Current surfaces differ by model/runtime/scenario. | Build normalized matrix over hardware, engine, context, concurrency. |
 | vLLM/SGLang/TRT/Dynamo comparison for same workload | Partial | Some engines covered for some models. | Normalize exact model, precision, prompt encoding, trace, and duration. |
 | Long-context buckets | Partial | Fixed-seq has 1k/8k; trace replay may have varied token lengths. | Add explicit 8k/32k/64k/128k/256k+ bins in reports and optional filters. |
@@ -205,10 +205,10 @@ This is the minimum useful matrix for a GMI cloud engineer evaluating long-conte
 
 | Priority | Build item | Acceptance criteria |
 |---:|---|---|
-| P0 | DSV4 `agentic-coding` configs for B200/B300 | Implemented; requires live run artifacts. |
-| P0 | DSV4 agentic launchers for B200/B300 | Implemented; reuses existing SGLang server recipes and switches the client to WEKA trace replay. |
-| P0 | Portable Slurm matrix runner | Implemented for dry-run/submit; no hardcoded cluster IDs; all cluster settings via env/JSON/YAML. |
-| P0 | Artifact contract | Implemented expected-path manifest; live runs must still produce the artifacts before claims. |
+| P0 | DSV4 `agentic-coding` configs for B200/B300/GB200 | Matrix generator emits DSV4 agentic jobs for each target hardware without touching fixed-seq paths. |
+| P0 | DSV4 agentic launchers | Single-node launchers exist for B200/B300; GB200 multi-node agentic recipe exists or maps cleanly to srt-slurm custom benchmark. |
+| P0 | Portable Slurm matrix runner | GMI operator can dry-run and submit without GitHub Actions; no hardcoded cluster IDs; all cluster settings via env/YAML. |
+| P0 | Artifact contract | Every run emits a normalized JSON, raw CSV/JSONL, server log, config, command, provenance, and expected-path manifest. |
 | P1 | Workload taxonomy and context buckets | Report breaks down metrics by workload class and context-length bucket. |
 | P1 | SLO/capacity report | For each cell, report max concurrency at TTFT/TPOT/E2E SLO and failure reason beyond it. |
 | P1 | Provenance capture | Per-job artifact records image digest, repo SHA, CUDA/driver, GPU inventory, topology, runtime versions, Slurm job ID, nodelist. |

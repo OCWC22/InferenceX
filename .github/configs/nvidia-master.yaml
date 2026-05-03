@@ -1732,10 +1732,6 @@ dsv4-fp4-b200-sglang:
       - { tp: 8, ep: 8, dp-attn: true, conc-start: 64, conc-end: 128 }
       # DP-attention (DP_ATTENTION=true) — max-throughput CONC range
       - { tp: 8, ep: 8, dp-attn: true, conc-start: 256, conc-end: 512 }
-    agentic-coding:
-    - duration: 1800
-      search-space:
-      - { tp: 8, ep: 8, dp-attn: true, offloading: none, conc-list: [1, 2, 4, 8, 16, 32, 64] }
 
 dsv4-fp4-b200-vllm:
   image: vllm/vllm-openai:v0.20.0-cu130
@@ -1955,10 +1951,6 @@ dsv4-fp4-b300-sglang:
       - { tp: 4, ep: 4, dp-attn: true, conc-start: 512, conc-end: 512 }
       - { tp: 8, ep: 8, dp-attn: true, conc-start: 2048, conc-end: 2048 }
       - { tp: 8, ep: 8, dp-attn: true, conc-start: 4096, conc-end: 4096 }
-    agentic-coding:
-    - duration: 1800
-      search-space:
-      - { tp: 8, ep: 8, dp-attn: true, offloading: none, conc-list: [1, 2, 4, 8, 16, 32, 64] }
 
   # DeepSeek-V4-Pro on B300 with EAGLE/MTP speculative decoding. Recipe is
   # selected inside benchmarks/single_node/dsv4_fp4_b300_sglang_mtp.sh by
